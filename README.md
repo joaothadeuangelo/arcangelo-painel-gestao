@@ -87,11 +87,10 @@ O acesso ao painel é restrito e pode ser limitado por tempo.
 👤 Autor
 Desenvolvido por João Thadeu Angelo
 📫 github.com/joaothadeuangelo
-📧 [joaothadeuangelo@gmail.com]
+📧 joaothadeuangelo@gmail.com
 
 
-📄 Licença
-Este projeto é privado e protegido. A cópia, modificação ou distribuição não autorizada é proibida.
+📄 Licença MIT - Este é um projeto de portfólio para fins de estudo e demonstração técnica. Sinta-se à vontade para explorar o código ou fazer um fork.
 
 
 

@@ -20,3 +20,7 @@ node_modules/
 # Uploads locais
 static/uploads/*
 !static/uploads/.gitkeep
+
+# Executáveis
+*.exe
+ngrok.exe

@@ -1,0 +1,359 @@
+{% extends "base.html" %}
+
+{% block sidebar_toggle %}{% endblock %}
+{% block whatsapp_button %}{% endblock %}
+
+{% block content %}
+
+<nav class="w-full max-w-2xl mx-auto pt-6 px-4 mb-4 flex items-center justify-between relative">
+    <a href="/" class="inline-flex items-center text-gray-400 hover:text-white transition-colors group z-10">
+        <svg class="w-5 h-5 mr-1 group-hover:-translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+        </svg>
+        <span class="text-sm font-semibold tracking-wide">VOLTAR</span>
+    </a>
+    <h1 class="absolute left-1/2 transform -translate-x-1/2 text-lg font-bold text-gray-200 tracking-wider hidden md:block">
+        NOVA CONSULTA
+    </h1>
+    <div class="w-20"></div> 
+</nav>
+
+<div class="max-w-2xl mx-auto px-4 pb-20">
+    
+    <div class="bg-gray-800 border border-gray-700 rounded-2xl p-4 shadow-lg mb-8 relative">
+        <form id="formConsultaPlaca" class="flex gap-3 relative z-10">
+            <div class="relative w-full">
+                <input type="text" id="inputPlaca" maxlength="7" placeholder="DIGITE A PLACA"
+                    class="w-full bg-gray-900 text-white font-mono text-xl border border-gray-600 rounded-xl py-3 px-4 text-center tracking-[0.2em] uppercase placeholder:tracking-normal placeholder:text-gray-600 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all disabled:opacity-50"
+                    autocomplete="off" autocapitalize="characters">
+            </div>
+            <button type="submit" id="btnConsultar"
+                class="bg-blue-600 hover:bg-blue-500 text-white font-bold px-6 rounded-xl transition-all flex items-center justify-center disabled:opacity-50 shadow-lg shadow-blue-900/20 active:scale-95">
+                <svg id="btnIcon" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                <svg id="btnSpinner" class="hidden w-6 h-6 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+            </button>
+        </form>
+        <div id="msgArea" class="hidden mt-3 p-2 rounded-lg text-xs font-bold text-center"></div>
+    </div>
+
+    <div id="resultadoArea" class="hidden animate-fade-in-up space-y-5">
+        
+        <div class="text-center mb-6">
+            <div class="inline-block bg-white text-black border-2 border-black border-t-[6px] border-t-[#003399] rounded-lg px-6 py-1 shadow-xl transform hover:scale-105 transition-transform duration-300">
+                <div id="headerPlaca" class="font-black font-mono text-3xl tracking-widest leading-none mt-1">---</div>
+            </div>
+            <h2 id="headerModelo" class="text-gray-400 font-bold mt-3 text-sm tracking-wide uppercase">---</h2>
+            <div id="badgeSituacao" class="inline-block mt-2 px-3 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border">---</div>
+        </div>
+
+        <div id="cardsContainer" class="space-y-5">
+            </div>
+
+        <div class="pt-4 pb-8">
+            <button onclick="PlacaConsultor.copiarRelatorio()" id="btnCopy" 
+                class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-xl shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2">
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" /></svg>
+                COPIAR RELATÓRIO
+            </button>
+        </div>
+
+    </div>
+</div>
+
+<script>
+const PlacaConsultor = {
+    config: {
+        apiUrl: "{{ url_for('consultas.api_consultar_placa') }}",
+        csrfToken: "{{ csrf_token() }}"
+    },
+    
+    state: { lastData: null },
+    elements: {},
+
+    // MAPA DE CAMPOS
+    // Alinhado com o objeto 'resposta_formatada' do Backend
+    fieldMap: {
+        identificacao: {
+            title: 'Identificação',
+            icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2" />',
+            fields: [
+                { key: 'dados_principais.renavam', label: 'Renavam' },
+                { key: 'dados_principais.chassi', label: 'Chassi', highlight: 'yellow' },
+                { key: 'caracteristicas.motor', label: 'Motor' },
+                { key: 'caracteristicas.marca_modelo', label: 'Marca/Modelo' },
+                { key: 'ano_comp', label: 'Ano Fab/Mod' }, 
+                { key: 'caracteristicas.cor', label: 'Cor' },
+                { key: 'caracteristicas.combustivel', label: 'Combustível' },
+                { key: 'potencia_comp', label: 'Potência' }
+            ]
+        },
+        documentacao: {
+            title: 'Documentação',
+            icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />',
+            fields: [
+                { key: 'datas.licenciamento', label: 'Licenciamento', highlight: 'green' },
+                { key: 'datas.dt_crlv', label: 'Emissão CRLV' },
+                { key: 'datas.dt_crv', label: 'Emissão CRV' },
+                { key: 'local_comp', label: 'Município/UF' }
+            ]
+        },
+        proprietario: {
+            title: 'Proprietário',
+            icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />',
+            fields: [
+                { key: 'proprietario.nome', label: 'Nome' },
+                { key: 'proprietario.cpf_cnpj', label: 'Documento' }
+            ]
+        },
+        restricoes: {
+            title: 'Restrições e Alertas',
+            icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />',
+            color: 'text-red-400',
+            fields: [
+                { key: 'restricoes.roubo_furto', label: 'Roubo/Furto', type: 'bool_alert' },
+                { key: 'restricoes.restricao_renajud', label: 'Renajud', type: 'bool_alert' },
+                { key: 'restricoes.restricao_1', label: 'Restrição 1' },
+                { key: 'restricoes.multa_renainf', label: 'Multas Renainf', type: 'bool' }
+            ]
+        }
+    },
+
+    init() {
+        ['formConsultaPlaca', 'inputPlaca', 'btnConsultar', 'btnIcon', 'btnSpinner', 'msgArea', 'resultadoArea', 'badgeSituacao', 'btnCopy', 'headerPlaca', 'headerModelo', 'cardsContainer']
+            .forEach(id => this.elements[id] = document.getElementById(id));
+        
+        if (this.elements.formConsultaPlaca) {
+            this.setupListeners();
+            // Foco automático no input ao carregar
+            setTimeout(() => this.elements.inputPlaca.focus(), 300);
+        }
+    },
+
+    setupListeners() {
+        this.elements.inputPlaca.addEventListener('input', (e) => {
+            e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+        });
+
+        this.elements.formConsultaPlaca.addEventListener('submit', (e) => this.handleSubmit(e));
+    },
+
+    async handleSubmit(e) {
+        e.preventDefault();
+        const placa = this.elements.inputPlaca.value.trim();
+
+        if (placa.length < 7) {
+            this.showToast('DIGITE 7 CARACTERES', 'error');
+            return;
+        }
+
+        this.setLoading(true);
+
+        try {
+            const response = await fetch(this.config.apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': this.config.csrfToken },
+                body: JSON.stringify({ placa })
+            });
+
+            const data = await response.json();
+            
+            // Tratamento de erros vindo do backend
+            if (!response.ok) throw new Error(data.error || 'Erro na consulta.');
+
+            // Normaliza a resposta (data.data ou data direto)
+            const dadosVeiculo = data.data || data;
+
+            this.populateUI(dadosVeiculo);
+            
+            // Atualiza o estado APÓS o populateUI (pois ele cria campos calculados como ano_comp)
+            this.state.lastData = dadosVeiculo; 
+
+        } catch (error) {
+            this.showToast(error.message, 'error');
+        } finally {
+            this.setLoading(false);
+            this.elements.btnConsultar.disabled = false;
+        }
+    },
+
+    // Acessa propriedades aninhadas com segurança
+    getNestedValue(obj, path) {
+        if (!path) return null;
+        return path.split('.').reduce((o, k) => (o || {})[k], obj);
+    },
+
+    populateUI(data) {
+        // 1. Criação de Campos Compostos (para exibição)
+        const v = (p) => this.getNestedValue(data, p);
+
+        data.ano_comp = (v('caracteristicas.ano_fab') || v('caracteristicas.ano_mod')) 
+            ? `${v('caracteristicas.ano_fab') || '?'} / ${v('caracteristicas.ano_mod') || '?'}` : null;
+        
+        data.potencia_comp = (v('caracteristicas.potencia') || v('caracteristicas.cilindradas')) 
+            ? `${v('caracteristicas.potencia') || '0'}cv / ${v('caracteristicas.cilindradas') || '0'}cc` : null;
+        
+        data.local_comp = (v('dados_principais.municipio') || v('dados_principais.uf')) 
+            ? `${v('dados_principais.municipio') || ''} / ${v('dados_principais.uf') || ''}` : null;
+
+        // 2. Preenche o Header
+        this.elements.headerPlaca.textContent = v('dados_principais.placa') || data.placa || '---';
+        this.elements.headerModelo.textContent = v('caracteristicas.marca_modelo') || '---';
+        
+        const sit = v('dados_principais.situacao') || '---';
+        // Lógica simples para cor do badge
+        const isGood = !sit.includes('ROUBO') && !sit.includes('FURTO') && (sit.includes('CIRCULACAO') || sit.includes('REGULAR') || sit.includes('OK'));
+        
+        const badge = this.elements.badgeSituacao;
+        badge.textContent = sit;
+        badge.className = `inline-block mt-2 px-3 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${
+            isGood ? 'bg-green-900/30 text-green-400 border-green-500/30' : 'bg-red-900/30 text-red-400 border-red-500/30'
+        }`;
+
+        // 3. Renderização dos Cards
+        const container = this.elements.cardsContainer;
+        container.innerHTML = ''; 
+
+        for (const [groupId, groupConfig] of Object.entries(this.fieldMap)) {
+            let fieldsHtml = '';
+            let hasFields = false;
+
+            groupConfig.fields.forEach(field => {
+                let value = this.getNestedValue(data, field.key);
+
+                // Pula campos vazios, nulos ou indefinidos
+                if (value === null || value === undefined || value === '') return;
+                
+                let displayValue = value;
+                let extraClasses = 'text-gray-200';
+
+                // Lógica de Cores e Booleanos
+                if (field.type === 'bool' || field.type === 'bool_alert') {
+                    // O backend agora envia "SIM" ou "NÃO", mas mantemos a verificação robusta
+                    const isTrue = String(value).toUpperCase() === 'SIM' || value === true || String(value) === 'true';
+                    displayValue = isTrue ? 'SIM' : 'NÃO';
+                    
+                    if (field.type === 'bool_alert') {
+                        extraClasses = isTrue ? 'text-red-500 font-bold animate-pulse' : 'text-gray-400';
+                    }
+                }
+
+                if (field.highlight === 'yellow') extraClasses = 'text-yellow-500/90';
+                if (field.highlight === 'green') extraClasses = 'text-green-400 font-bold';
+                
+                // Exceção visual para "SEM RESTRICAO"
+                if (String(displayValue).includes('SEM RESTRI') || String(displayValue).includes('NADA CONSTA')) {
+                    extraClasses = 'text-gray-500';
+                }
+
+                fieldsHtml += `
+                    <div class="flex justify-between items-start py-2.5 border-b border-gray-700/50 last:border-0 hover:bg-white/5 transition-colors px-2 -mx-2 rounded-lg">
+                        <span class="text-gray-400 text-sm font-medium flex-1">${field.label}</span>
+                        <span class="text-right font-mono text-sm font-medium flex-[1.5] break-words ${extraClasses}">${displayValue}</span>
+                    </div>
+                `;
+                hasFields = true;
+            });
+
+            if (hasFields) {
+                const cardHtml = `
+                    <div class="bg-[#2c2c2e] border border-gray-700 rounded-2xl p-5 shadow-lg animate-fade-in-up">
+                        <h3 class="text-xs font-extrabold ${groupConfig.color || 'text-blue-400'} uppercase tracking-widest mb-4 flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">${groupConfig.icon}</svg>
+                            ${groupConfig.title}
+                        </h3>
+                        <div class="flex flex-col">
+                            ${fieldsHtml}
+                        </div>
+                    </div>
+                `;
+                container.insertAdjacentHTML('beforeend', cardHtml);
+            }
+        }
+
+        this.elements.resultadoArea.classList.remove('hidden');
+        setTimeout(() => this.elements.resultadoArea.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+    },
+
+    copiarRelatorio() {
+        if (!this.state.lastData) return;
+        const d = this.state.lastData;
+        
+        const g = (path) => this.getNestedValue(d, path);
+        const txt = (lbl, path) => g(path) ? `• ${lbl}: ${g(path)}\n` : '';
+        // Função bool ajustada para o novo retorno da API (que manda "SIM" string)
+        const bool = (lbl, path) => {
+            const val = g(path);
+            return (val === true || String(val).toUpperCase() === 'SIM') ? `🚨 ${lbl}: SIM\n` : '';
+        };
+
+        let r = `📊 RELATÓRIO VEICULAR\n`;
+        r += `🚘 ${g('dados_principais.placa') || 'PLACA'} - ${g('caracteristicas.marca_modelo') || ''}\n`;
+        r += `────────────────\n`;
+        
+        r += `🚗 IDENTIFICAÇÃO\n`;
+        r += txt('REN', 'dados_principais.renavam');
+        r += txt('CHASSI', 'dados_principais.chassi');
+        r += txt('MOTOR', 'caracteristicas.motor');
+        r += txt('COR', 'caracteristicas.cor');
+        r += txt('ANO', 'ano_comp'); // Usa o campo calculado no populateUI
+
+        r += `\n📄 DOCUMENTAÇÃO\n`;
+        r += txt('LICENC', 'datas.licenciamento');
+        r += txt('LOCAL', 'local_comp');
+        r += txt('SITUAÇÃO', 'dados_principais.situacao');
+
+        r += `\n👤 PROPRIETÁRIO\n`;
+        r += txt('NOME', 'proprietario.nome');
+        r += txt('DOC', 'proprietario.cpf_cnpj');
+
+        r += `\n⚠️ RESTRIÇÕES\n`;
+        r += bool('ROUBO/FURTO', 'restricoes.roubo_furto');
+        r += bool('RENAJUD', 'restricoes.restricao_renajud');
+        r += bool('MULTAS', 'restricoes.multa_renainf');
+        
+        const rest1 = g('restricoes.restricao_1');
+        if(rest1 && !rest1.includes('SEM RESTRI') && !rest1.includes('NADA CONSTA')) {
+            r += `• RESTRIÇÃO: ${rest1}\n`;
+        }
+
+        navigator.clipboard.writeText(r).then(() => {
+            const btn = this.elements.btnCopy;
+            const originalHtml = btn.innerHTML;
+            btn.innerHTML = "✅ COPIADO!";
+            btn.classList.replace('bg-blue-600', 'bg-green-600');
+            setTimeout(() => {
+                btn.innerHTML = originalHtml;
+                btn.classList.replace('bg-green-600', 'bg-blue-600');
+            }, 2000);
+        });
+    },
+
+    setLoading(isLoading) {
+        const { btnConsultar, btnIcon, btnSpinner, inputPlaca, resultadoArea } = this.elements;
+        inputPlaca.disabled = isLoading;
+        btnConsultar.disabled = isLoading;
+        if (isLoading) {
+            btnIcon.classList.add('hidden');
+            btnSpinner.classList.remove('hidden');
+            resultadoArea.classList.add('opacity-50');
+        } else {
+            btnIcon.classList.remove('hidden');
+            btnSpinner.classList.add('hidden');
+            resultadoArea.classList.remove('opacity-50');
+        }
+    },
+
+    showToast(msg, type) {
+        const el = this.elements.msgArea;
+        el.textContent = msg;
+        el.className = `mt-3 p-2 rounded-lg text-xs font-bold text-center ${
+            type === 'error' ? 'bg-red-900/50 text-red-200' : 'bg-blue-900/50 text-blue-200'
+        }`;
+        el.classList.remove('hidden');
+        setTimeout(() => el.classList.add('hidden'), 3000);
+    }
+};
+
+document.addEventListener('DOMContentLoaded', () => PlacaConsultor.init());
+</script>
+{% endblock %}

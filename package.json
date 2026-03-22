@@ -1,0 +1,24 @@
+{
+  "name": "arcangelo-painel",
+  "version": "1.0.0",
+  "description": "Sistema web completo para **cadastro, busca e gerenciamento de veículos**, com controle de acesso por usuário e registro de ações. Ideal para empresas que precisam consultar RENAVAM e CPF de veículos por modelo — como no cadastro de motoristas em apps como a 99.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/arcangelosystem/arcsys-painel.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/arcangelosystem/arcsys-painel/issues"
+  },
+  "homepage": "https://github.com/arcangelosystem/arcsys-painel#readme",
+  "devDependencies": {
+    "tailwindcss": "^3.4.19"
+  }
+}

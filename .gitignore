@@ -1,0 +1,22 @@
+# Variáveis de ambiente
+.env
+*.env
+
+# Bancos locais
+*.db
+*.sqlite3
+
+# Sessões e cache
+flask_session/
+*.session
+__pycache__/
+*.pyc
+
+# Ambientes/dependências locais
+venv/
+.venv/
+node_modules/
+
+# Uploads locais
+static/uploads/*
+!static/uploads/.gitkeep

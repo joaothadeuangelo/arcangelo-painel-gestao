@@ -1,0 +1,216 @@
+{% extends "base.html" %}
+
+{% block title %}Gerenciar Usuários{% endblock %}
+
+{# --- DESLIGA O MENU E O WHATSAPP NESSA TELA --- #}
+{% block sidebar %}{% endblock %}
+{% block whatsapp_button %}{% endblock %}
+
+{% block content %}
+<div class="w-full max-w-7xl mx-auto">
+    <div class="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+        <h1 class="text-2xl sm:text-3xl font-bold">Gerenciamento de Usuários</h1>
+        <div class="flex flex-col sm:flex-row w-full sm:w-auto gap-2">
+            <a href="{{ url_for('admin.criar_usuario') }}" class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded flex items-center justify-center gap-2 transition-transform hover:-translate-y-0.5">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path></svg>
+                <span>Novo Usuário</span>
+            </a>
+            <a href="{{ url_for('main.home') }}" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded flex items-center justify-center gap-2 transition-transform hover:-translate-y-0.5">
+                🔙 <span>Voltar ao Início</span>
+            </a>
+        </div>
+    </div>
+
+    {% if session.get('dados_novo_usuario') %}
+    {% set novo = session.pop('dados_novo_usuario') %}
+    <div class="bg-gray-800 border border-green-500 max-w-2xl mx-auto mb-8 p-6 rounded-lg shadow-lg relative text-white">
+        <button onclick="this.parentElement.remove()" class="absolute top-3 right-3 text-gray-300 hover:text-white" title="Fechar">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+        <h2 class="text-xl font-bold mb-3 text-green-300">✅ Usuário criado com sucesso!</h2>
+        <div class="space-y-1 text-left">
+            <p><strong>📧 Login:</strong> <span id="login">{{ novo.email }}</span></p>
+            <p><strong>🔐 Senha:</strong> <span id="senha">{{ novo.senha }}</span></p>
+            <p><strong>⏳ Validade:</strong> <span id="validade">{{ novo.validade }}</span></p>
+            <p><strong>🔗 Link de acesso:</strong> <a id="link" href="{{ novo.link }}" class="underline text-blue-300 hover:text-blue-400" target="_blank">{{ novo.link }}</a></p>
+        </div>
+        <button onclick="copiarInformacoesUsuario()" class="mt-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded text-sm">
+            📋 Copiar informações
+        </button>
+    </div>
+    {% endif %}
+
+    <div class="overflow-x-auto rounded-lg border border-gray-700">
+        <table class="min-w-full responsive-table">
+            <thead class="bg-gray-800 text-sm uppercase text-gray-300">
+                <tr>
+                    <th class="py-3 px-4 text-left">Nome</th>
+                    <th class="py-3 px-4 text-left">Email</th>
+                    <th class="py-3 px-4 text-left">WhatsApp</th>
+                    <th class="py-3 px-4 text-center">Status</th>
+                    <th class="py-3 px-4 text-center">Admin</th>
+                    <th class="py-3 px-4 text-center">Permissões</th>
+                    <th class="py-3 px-4 text-left">Validade</th>
+                    <th class="py-3 px-4 text-center">Ações</th>
+                </tr>
+            </thead>
+            <tbody class="bg-gray-800/50">
+                {% for usuario in usuarios %}
+                <tr class="hover:bg-gray-700/50">
+                    <td data-label="Nome">{{ usuario.nome }}</td>
+                    <td data-label="Email" class="text-gray-400 break-all">{{ usuario.email }}</td>
+                    <td data-label="WhatsApp">
+                        {% if usuario.telefone %}
+                            <div class="flex items-center gap-2">
+                                <span class="text-gray-300">{{ usuario.telefone }}</span>
+                                {% set mensagem_whatsapp = "Olá, " + usuario.nome + "! Seu acesso ao ARCANG3LO PAINEL foi aprovado. Faça login para começar a usar." %}
+                                <a href="https://wa.me/55{{ usuario.telefone }}?text={{ mensagem_whatsapp | urlencode }}" target="_blank" title="Avisar no WhatsApp"
+                                   class="bg-green-600 hover:bg-green-500 text-white p-1.5 rounded-full transition-colors">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                        <path d="M10.894 2.553a1 1 0 00-1.789 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
+                                    </svg>
+                                </a>
+                            </div>
+                        {% else %}
+                            <span class="text-gray-500">Não informado</span>
+                        {% endif %}
+                    </td>
+                    
+                    <!-- >>> LÓGICA DE STATUS ATUALIZADA <<< -->
+                    <td data-label="Status" class="text-center">
+                        {% if usuario.status == 'banido' %}
+                            <span class="bg-red-900 text-red-400 text-xs font-semibold px-2.5 py-0.5 rounded-full">Banido</span>
+                        {% elif usuario.status == 'aprovado' %}
+                            <span class="bg-green-800 text-green-300 text-xs font-semibold px-2.5 py-0.5 rounded-full">Aprovado</span>
+                        {% elif usuario.status == 'pendente' %}
+                            <span class="bg-yellow-800 text-yellow-300 text-xs font-semibold px-2.5 py-0.5 rounded-full animate-pulse">Pendente</span>
+                        {% elif usuario.status == 'rejeitado' %}
+                            <span class="bg-red-800 text-red-300 text-xs font-semibold px-2.5 py-0.5 rounded-full">Rejeitado</span>
+                        {% else %}
+                            <span class="bg-gray-700 text-gray-300 text-xs font-semibold px-2.5 py-0.5 rounded-full">{{ usuario.status }}</span>
+                        {% endif %}
+                    </td>
+
+                    <td data-label="Admin" class="text-center">
+                        <span class="text-xl">{% if usuario.admin %}✅{% else %}❌{% endif %}</span>
+                    </td>
+                    <td data-label="Permissões">
+                        <div class="flex justify-center items-center gap-2">
+                            <span class="w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold {{ 'bg-blue-500 text-white' if usuario.pode_cadastrar else 'bg-gray-700 text-gray-400' }}" title="Cadastrar">C</span>
+                            <span class="w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold {{ 'bg-yellow-500 text-black' if usuario.pode_editar else 'bg-gray-700 text-gray-400' }}" title="Editar">E</span>
+                            <span class="w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold {{ 'bg-red-500 text-white' if usuario.pode_excluir else 'bg-gray-700 text-gray-400' }}" title="Excluir">X</span>
+                        </div>
+                    </td>
+                    
+                    <!-- >>> LÓGICA DE VALIDADE ATUALIZADA (REMOVIDO "BANIDO") <<< -->
+                    <td data-label="Validade" class="whitespace-nowrap">
+                        {% if usuario.validade %}
+                            {{ usuario.validade.strftime('%d/%m/%Y %H:%M') }}
+                        {% else %}
+                            Ilimitado
+                        {% endif %}
+                    </td>
+
+                    <td data-label="Ações">
+                        <div class="flex items-center justify-center gap-2">
+                            {% if usuario.status == 'pendente' %}
+                                <form action="{{ url_for('aprovar_usuario', id=usuario.id) }}" method="POST" class="inline">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                    <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-3 rounded text-sm whitespace-nowrap">Aprovar</button>
+                                </form>
+                                <form action="{{ url_for('rejeitar_usuario', id=usuario.id) }}" method="POST" class="inline">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                    <button type="submit" class="bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-3 rounded text-sm whitespace-nowrap">Rejeitar</button>
+                                </form>
+                            {% else %}
+                                <a href="{{ url_for('admin.editar_usuario', id=usuario.id) }}" class="bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-1 px-3 rounded text-sm whitespace-nowrap">Editar</a>
+                                {% if usuario.id != session.get('usuario_id') %}
+                                    <form id="form-banir-{{ usuario.id }}" action="{{ url_for('admin.banir_usuario', id=usuario.id) }}" method="POST" class="hidden">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                    </form>
+                                    <form id="form-excluir-{{ usuario.id }}" action="{{ url_for('admin.excluir_usuario', id=usuario.id) }}" method="POST" class="hidden">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                    </form>
+                                    <button type="button" onclick="abrirModalConfirmacao('banir', '{{ usuario.nome }}', 'form-banir-{{ usuario.id }}')" class="bg-orange-500 hover:bg-orange-600 text-white font-bold py-1 px-3 rounded text-sm whitespace-nowrap">Banir</button>
+                                    <button type="button" onclick="abrirModalConfirmacao('excluir', '{{ usuario.nome }}', 'form-excluir-{{ usuario.id }}')" class="bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-3 rounded text-sm whitespace-nowrap">Excluir</button>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div id="acaoModal" class="hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
+    <div class="bg-gray-800 rounded-lg p-8 w-full max-w-md shadow-lg border border-gray-700 text-center">
+        <h2 id="modal-titulo" class="text-2xl font-bold mb-4">⚠️ Confirmar Ação</h2>
+        <p id="modal-texto" class="text-lg text-gray-300 mb-8"></p>
+        <div class="flex justify-center gap-4">
+            <button type="button" onclick="fecharModalConfirmacao()" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-6 rounded">Cancelar</button>
+            <button type="button" id="botao-confirmar" onclick="executarAcao()" class="text-white font-bold py-2 px-6 rounded">Sim, Confirmar</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+function copiarInformacoesUsuario() {
+    const login = document.getElementById('login').innerText;
+    const senha = document.getElementById('senha').innerText;
+    const validade = document.getElementById('validade').innerText;
+    const link = document.getElementById('link').href;
+    const texto = `✅ Usuário criado com sucesso!\n\n📧 Login: ${login}\n🔐 Senha: ${senha}\n⏳ Validade: ${validade}\n🔗 Link de acesso: ${link}`;
+    navigator.clipboard.writeText(texto).then(() => {
+        mostrarToast('Informações copiadas com sucesso!', 'success');
+    }).catch(err => {
+        mostrarToast('Erro ao copiar para a área de transferência.', 'error');
+    });
+}
+
+const acaoModal = document.getElementById('acaoModal');
+const modalTitulo = document.getElementById('modal-titulo');
+const modalTexto = document.getElementById('modal-texto');
+const botaoConfirmar = document.getElementById('botao-confirmar');
+
+function abrirModalConfirmacao(tipo, nome, formId) {
+    if (!acaoModal) return;
+
+    if (tipo === 'banir') {
+        modalTitulo.textContent = '⚠️ Confirmar Banimento';
+        modalTexto.innerHTML = `Tem certeza que deseja banir o usuário <strong class="text-yellow-400">${nome}</strong>?`;
+        botaoConfirmar.className = 'bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-6 rounded';
+        botaoConfirmar.textContent = 'Sim, Banir';
+    } else if (tipo === 'excluir') {
+        modalTitulo.textContent = '🚨 Confirmar Exclusão';
+        modalTexto.innerHTML = `Atenção! Excluir <strong class="text-red-400">${nome}</strong> é uma ação permanente. Deseja continuar?`;
+        botaoConfirmar.className = 'bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded';
+        botaoConfirmar.textContent = 'Sim, Excluir';
+    }
+
+    botaoConfirmar.dataset.formId = formId;
+    acaoModal.classList.remove('hidden');
+    acaoModal.classList.add('flex');
+}
+
+function fecharModalConfirmacao() {
+    if (acaoModal) {
+        acaoModal.classList.add('hidden');
+        acaoModal.classList.remove('flex');
+    }
+}
+
+function executarAcao() {
+    const formId = botaoConfirmar.dataset.formId;
+    const formParaEnviar = document.getElementById(formId);
+    if (formParaEnviar) {
+        formParaEnviar.submit();
+    }
+    fecharModalConfirmacao();
+}
+</script>
+{% endblock %}

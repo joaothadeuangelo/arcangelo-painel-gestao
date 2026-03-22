@@ -1,0 +1,345 @@
+{% extends "base.html" %}
+
+
+{% block title %}Cadastrar Veículo{% endblock %}
+
+{# --- DESLIGA O MENU E O WHATSAPP NESSA TELA --- #}
+{% block sidebar %}{% endblock %}
+{% block whatsapp_button %}{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-center h-full">
+
+    <div class="bg-gray-800 w-full max-w-xl p-8 rounded-lg shadow-lg border border-gray-700">
+        <h2 class="text-2xl font-bold mb-6 text-center">🚗 Cadastrar Novo Veículo</h2>
+
+        <form id="form-cadastro" action="{{ url_for('veiculos.cadastrar') }}" method="POST" enctype="multipart/form-data" class="space-y-5">
+            <input type="hidden" id="csrf_token" name="csrf_token" value="{{ csrf_token() }}"/>
+            
+            <div>
+                <label for="modelo" class="block mb-1 font-medium">Modelo:</label>
+                <input type="text" id="modelo" name="modelo" required autocomplete="off"
+                       class="w-full p-3 rounded bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+
+            <div>
+                <label for="renavam" class="flex justify-between items-center mb-1 font-medium">
+                    <span>RENAVAM:</span>
+                    <span id="contador-renavam" class="text-sm text-gray-400 font-normal">(0/11)</span>
+                </label>
+                <input type="text" 
+                       id="renavam" 
+                       name="renavam" 
+                       required 
+                       autocomplete="off"
+                       maxlength="11" 
+                       pattern="[0-9]{11}" 
+                       title="O RENAVAM deve conter exatamente 11 números."
+                       inputmode="numeric"
+                       oninput="this.value = this.value.replace(/\D/g, '')"
+                       class="w-full p-3 rounded bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 border-2 border-transparent transition-colors">
+                <p id="erro-renavam" class="text-red-400 text-sm hidden mt-2 flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path></svg>
+                    <span>RENAVAM já existente no sistema.</span>
+                </p>
+            </div>
+
+            <div>
+                <label for="cpf" class="flex justify-between items-center mb-1 font-medium">
+                    <span>CPF/CNPJ:</span>
+                    <span id="contador-cpf" class="text-sm text-gray-400 font-normal">(0/11 ou 14)</span>
+                </label>
+                <input type="text" id="cpf" name="cpf" required autocomplete="off" oninput="this.value = this.value.replace(/\D/g, '')" maxlength="14" pattern="[0-9]{11}|[0-9]{14}" title="O CPF/CNPJ deve conter 11 ou 14 números." inputmode="numeric" class="w-full p-3 rounded bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+
+            <div>
+                <label for="ano" class="block mb-1 font-medium">Ano Fabricação:</label>
+                <select id="ano" name="ano" class="w-full p-3 rounded bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none">
+                    <option value="" selected>N/A</option>
+                    {% for i in range(2025, 1999, -1) %}
+                        <option value="{{ i }}">{{ i }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label for="cor" class="block mb-1 font-medium">Cor Predominante:</label>
+                <select id="cor" name="cor" required class="w-full p-3 rounded bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none">
+                    <option value="" disabled selected>Selecione a Cor</option>
+                    {% set cores = ["PRETA", "BRANCA", "PRATA", "CINZA", "VERMELHA", "AZUL", "VERDE", "AMARELA", "MARROM", "LARANJA", "BEGE", "ROXO", "ROSA", "OUTRA"] %}
+                    {% for cor_opcao in cores %}
+                        <option value="{{ cor_opcao }}">{{ cor_opcao }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label class="block mb-1 font-medium">CRLV (PDF ou TXT):</label>
+                <div class="flex items-center gap-4">
+                    <label for="arquivo" class="cursor-pointer bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded">Escolher arquivo</label>
+                    <span id="nome-arquivo" class="text-gray-400 text-sm">Nenhum arquivo selecionado</span>
+                </div>
+                <input type="file" id="arquivo" name="arquivo" accept=".pdf,.txt" class="hidden">
+            </div>
+
+            <div class="flex flex-col sm:flex-row gap-4 pt-4">
+                <button id="btnCadastrar" type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded flex items-center justify-center gap-2 transition-opacity disabled:opacity-50">
+                    <svg id="icone-salvar" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path></svg>
+                    <svg id="icone-loading" class="hidden animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    <span id="texto-botao">Cadastrar</span>
+                </button>
+                <a href="{{ url_for('consultas.buscar') }}" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded flex items-center justify-center gap-2">
+                    🔙 <span>Voltar</span>
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // --- 1. SELETORES DOS ELEMENTOS ---
+    const formCadastro = document.getElementById('form-cadastro');
+    const campoModelo = document.getElementById("modelo");
+    const campoRenavam = document.getElementById("renavam");
+    const erroRenavam = document.getElementById("erro-renavam");
+    const btnCadastrar = document.getElementById("btnCadastrar");
+    const contadorRenavam = document.getElementById("contador-renavam");
+    const campoCpf = document.getElementById("cpf");
+    const contadorCpf = document.getElementById("contador-cpf");
+    
+    // Obtém o token CSRF (garantindo que ele exista no template)
+    const csrfElement = document.getElementById("csrf_token");
+    const csrfToken = csrfElement ? csrfElement.value : '';
+
+    // --- 2. LÓGICA DE VERIFICAÇÃO DE RENAVAM (AJAX) ---
+
+    // Função Debounce (Evita chamadas excessivas enquanto digita)
+    function debounce(func, delay) {
+        let timeout;
+        return function(...args) {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => func.apply(this, args), delay);
+        };
+    }
+
+    // Função que chama o Backend
+    const checarRenavamNoServidor = async () => {
+        const renavam = campoRenavam.value.trim();
+
+        // Reseta estados visuais
+        erroRenavam.classList.add("hidden");
+        campoRenavam.classList.remove("border-red-500", "focus:ring-red-500");
+        
+        // Só bloqueia o botão se tiver 11 dígitos e for inválido. 
+        // Se estiver digitando, deixamos o backend validar depois ou o HTML5 impedir o envio.
+        btnCadastrar.disabled = false; 
+
+        if (renavam.length !== 11) return; 
+
+        try {
+            // AQUI ESTÁ A MUDANÇA PRINCIPAL: Uso do url_for do Flask
+            const response = await fetch("{{ url_for('veiculos.verificar_renavam') }}", {
+                method: "POST",
+                headers: { 
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": csrfToken 
+                },
+                body: JSON.stringify({ renavam }),
+            });
+
+            if (!response.ok) throw new Error('Erro na API');
+
+            const data = await response.json();
+            
+            if (data.existe) {
+                // Se existe, mostra erro e bloqueia botão
+                erroRenavam.classList.remove("hidden");
+                campoRenavam.classList.add("border-red-500", "focus:ring-red-500");
+                btnCadastrar.disabled = true;
+            }
+
+        } catch (err) {
+            console.error("Erro na verificação do RENAVAM:", err);
+        }
+    };
+    
+    // Adiciona o listener com atraso de 500ms
+    campoRenavam.addEventListener("input", debounce(checarRenavamNoServidor, 500));
+
+
+    // --- 3. CONTADORES E FORMATAÇÃO VISUAL ---
+
+    campoRenavam.addEventListener("input", () => {
+        const numChars = campoRenavam.value.length;
+        contadorRenavam.textContent = `(${numChars}/11)`;
+        // Pinta de verde se tiver 11, senão volta ao padrão
+        if (numChars === 11) {
+            contadorRenavam.classList.remove('text-gray-400');
+            contadorRenavam.classList.add('text-green-400');
+        } else {
+            contadorRenavam.classList.add('text-gray-400');
+            contadorRenavam.classList.remove('text-green-400');
+        }
+    });
+
+    campoCpf.addEventListener("input", () => {
+        const numChars = campoCpf.value.length;
+        contadorCpf.textContent = `(${numChars}/11 ou 14)`;
+        if (numChars === 11 || numChars === 14) {
+            contadorCpf.classList.remove('text-gray-400');
+            contadorCpf.classList.add('text-green-400');
+        } else {
+            contadorCpf.classList.add('text-gray-400');
+            contadorCpf.classList.remove('text-green-400');
+        }
+    });
+    
+    // Força MAIÚSCULAS no modelo
+    campoModelo.addEventListener("input", () => {
+        const start = campoModelo.selectionStart;
+        campoModelo.value = campoModelo.value.toUpperCase();
+        campoModelo.setSelectionRange(start, start);
+    });
+
+
+    // --- 4. UPLOAD E LEITURA DE ARQUIVO (.TXT) ---
+
+    const inputArquivo = document.getElementById('arquivo');
+    const nomeArquivoSpan = document.getElementById('nome-arquivo');
+
+    inputArquivo.addEventListener('change', () => {
+        if (inputArquivo.files.length > 0) {
+            const file = inputArquivo.files[0];
+            nomeArquivoSpan.textContent = file.name;
+            
+            // Se for TXT, processa
+            if (file.name.toLowerCase().endsWith('.txt')) {
+                parseTxtAndFillForm(file);
+            }
+        } else {
+            nomeArquivoSpan.textContent = 'Nenhum arquivo selecionado';
+        }
+    });
+
+    // Animação do botão ao enviar
+    formCadastro.addEventListener('submit', (e) => {
+        if (btnCadastrar.disabled) {
+            e.preventDefault();
+            return;
+        }
+        // Validação nativa do HTML5
+        if (!formCadastro.checkValidity()) return;
+        
+        btnCadastrar.disabled = true;
+        const textoBotao = document.getElementById('texto-botao');
+        const iconeSalvar = document.getElementById('icone-salvar');
+        const iconeLoading = document.getElementById('icone-loading');
+        
+        if(textoBotao) textoBotao.textContent = 'Cadastrando...';
+        if(iconeSalvar) iconeSalvar.classList.add('hidden');
+        if(iconeLoading) iconeLoading.classList.remove('hidden');
+    });
+
+
+    // --- 5. PARSER INTELIGENTE DE TXT ---
+    function parseTxtAndFillForm(file) {
+        const reader = new FileReader();
+
+        reader.onload = function(e) {
+            const content = e.target.result;
+
+            // Regexes
+            const regexModelo = /(?:-|\b)Marca[\/\s]*Modelo[:\s]+(.*)/i;
+            const regexRenavam = /(?:-|\b)Renavam[:\s]+(\d+)/i;
+            const regexCpf = /(?:CPF[\/\s]*CNPJ|DOCUMENTO)[:\s]+(.*)/i; 
+            const regexAno = /(?:Ano|Fabricação).*?[:\s]+(\d{4})/i;
+            const regexCor = /(?:-|\b)Cor[:\s]+(.*)/i;
+
+            const matchModelo = content.match(regexModelo);
+            const matchRenavam = content.match(regexRenavam);
+            const matchCpf = content.match(regexCpf);
+            const matchAno = content.match(regexAno);
+            const matchCor = content.match(regexCor);
+
+            // A) Modelo
+            if (matchModelo) {
+                let valorModelo = matchModelo[1].trim().toUpperCase();
+                // Remove prefixos numéricos comuns em docs (ex: "1 - HONDA/CIVIC")
+                if (valorModelo.match(/^\d+\s+-\s+/)) {
+                    const partes = valorModelo.split(' - ');
+                    if (partes.length > 1) valorModelo = partes.slice(1).join(' - ');
+                }
+                campoModelo.value = valorModelo;
+            }
+
+            // B) Renavam
+            if (matchRenavam) {
+                campoRenavam.value = matchRenavam[1].trim();
+                campoRenavam.dispatchEvent(new Event('input')); // Dispara verificação
+            }
+
+            // C) CPF / Documento (Lógica Blindada)
+            if (matchCpf) {
+                let valorBruto = matchCpf[1];
+
+                // Remove pontuação (.,-/), mas mantém espaços para não colar números isolados
+                let textoSemPontuacao = valorBruto.replace(/[.\-\/]/g, '');
+
+                // Procura sequência de 11 a 14 dígitos (evita pegar o "1" de "1 - FISICA")
+                let cpfEncontrado = textoSemPontuacao.match(/(\d{11,14})/);
+
+                if (cpfEncontrado) {
+                    campoCpf.value = cpfEncontrado[0];
+                } else {
+                    // Fallback de segurança: limpa tudo que não for número e corta
+                    let apenasNumeros = valorBruto.replace(/\D/g, '');
+                    campoCpf.value = apenasNumeros.substring(0, apenasNumeros.length > 11 ? 14 : 11);
+                }
+                
+                campoCpf.dispatchEvent(new Event('input')); // Atualiza contador
+            }
+
+            // D) Ano
+            if (matchAno) {
+                const anoEncontrado = matchAno[1].trim();
+                const selectAno = document.getElementById('ano');
+                // Verifica se o ano existe nas opções antes de setar
+                if (selectAno.querySelector(`option[value="${anoEncontrado}"]`)) {
+                    selectAno.value = anoEncontrado;
+                }
+            }
+
+            // E) Cor
+            if (matchCor) {
+                let corEncontrada = matchCor[1].trim().toUpperCase();
+                if (corEncontrada.match(/^\d+\s+-\s+/)) {
+                     corEncontrada = corEncontrada.split(' - ')[1] || corEncontrada;
+                }
+                
+                const selectCor = document.getElementById('cor');
+                // Tenta match exato
+                let optionExists = Array.from(selectCor.options).some(opt => opt.value === corEncontrada);
+                
+                if (optionExists) {
+                    selectCor.value = corEncontrada;
+                } else {
+                    // Tenta match parcial (Ex: arquivo tem "BRANCA FANTASMA", sistema tem "BRANCA")
+                    for (let opt of selectCor.options) {
+                        if (opt.value && corEncontrada.includes(opt.value)) {
+                            selectCor.value = opt.value;
+                            break;
+                        }
+                    }
+                }
+            }
+        };
+
+        reader.readAsText(file);
+    }
+});
+</script>
+{% endblock %}

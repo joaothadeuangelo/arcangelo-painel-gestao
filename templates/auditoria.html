@@ -1,0 +1,202 @@
+{% extends "base.html" %}
+
+{% block title %}Logs de Auditoria{% endblock %}
+
+{# --- DESLIGA O MENU E O WHATSAPP NESSA TELA --- #}
+{% block sidebar %}{% endblock %}
+{% block whatsapp_button %}{% endblock %}
+
+{% block content %}
+<div class="w-full max-w-7xl mx-auto">
+    <div class="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+        <h1 class="text-3xl font-bold flex items-center gap-3">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            Logs de Auditoria
+        </h1>
+        <a href="{{ url_for('main.home') }}" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg flex items-center gap-2 transition-transform hover:-translate-y-0.5 shadow-lg shadow-blue-500/20">
+            🔙 Voltar ao Início
+        </a>
+    </div>
+
+    <div class="bg-gray-800/50 border border-gray-700 rounded-lg p-4 mb-6">
+        <form id="form-filtros" class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 items-end">
+            <div>
+                <label for="filtro_usuario" class="block text-sm font-medium text-gray-300 mb-1">Filtrar por Usuário</label>
+                <input type="text" name="filtro_usuario" id="filtro_usuario" placeholder="Digite um nome..." 
+                       class="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500">
+            </div>
+            <div>
+                <label for="filtro_acao" class="block text-sm font-medium text-gray-300 mb-1">Filtrar por Ação</label>
+                <select name="filtro_acao" id="filtro_acao" 
+                        class="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500">
+                    <option value="">Todas as Ações</option>
+                    {% for acao in acoes_disponiveis %}
+                        <option value="{{ acao }}">{{ acao }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="flex gap-2">
+                <button type="submit" id="btn-buscar" class="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-semibold py-2 px-4 rounded-md flex items-center justify-center gap-2 transition">
+                    <svg id="icone-buscar" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" /></svg>
+                    <svg id="icone-loading" class="hidden animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    <span id="texto-buscar">Buscar</span>
+                </button>
+                <button type="button" id="btn-limpar" class="w-full bg-gray-600 hover:bg-gray-500 text-white font-semibold py-2 px-4 rounded-md flex items-center justify-center gap-2 transition text-center">
+                    Limpar
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <div class="overflow-x-auto rounded-lg border border-gray-700 shadow-lg">
+        <table class="min-w-full text-sm">
+            <thead class="bg-gray-800 text-left text-gray-300 uppercase tracking-wider">
+                <tr>
+                    <th class="py-3 px-4">Usuário</th>
+                    <th class="py-3 px-4">Ação</th>
+                    <th class="py-3 px-4">Detalhes</th>
+                    <th class="py-3 px-4">Data e Hora</th>
+                </tr>
+            </thead>
+            <tbody id="logs-table-body" class="divide-y divide-gray-700">
+                <tr>
+                    <td colspan="4" class="text-center py-8 text-gray-500">
+                        Carregando logs...
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div id="pagination-controls" class="flex justify-between items-center mt-6 gap-4 flex-wrap"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // --- Seletores dos Elementos ---
+    const formFiltros = document.getElementById('form-filtros');
+    const filtroUsuarioInput = document.getElementById('filtro_usuario');
+    const filtroAcaoSelect = document.getElementById('filtro_acao');
+    const btnBuscar = document.getElementById('btn-buscar');
+    const btnLimpar = document.getElementById('btn-limpar');
+    const tableBody = document.getElementById('logs-table-body');
+    const paginationControls = document.getElementById('pagination-controls');
+
+    // --- Função Principal para Buscar Logs ---
+    async function fetchLogs(page = 1) {
+        const filtroUsuario = filtroUsuarioInput.value;
+        const filtroAcao = filtroAcaoSelect.value;
+
+        // Mostra estado de "carregando"
+        tableBody.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-gray-400">Buscando...</td></tr>`;
+        paginationControls.innerHTML = '';
+        btnBuscar.disabled = true;
+        btnBuscar.querySelector('#icone-buscar').classList.add('hidden');
+        btnBuscar.querySelector('#icone-loading').classList.remove('hidden');
+
+        // Constrói a URL da API com os parâmetros de filtro e página
+        const url = new URL("{{ url_for('admin.api_auditoria') }}", window.location.origin);
+        url.searchParams.append('page', page);
+        if (filtroUsuario) url.searchParams.append('filtro_usuario', filtroUsuario);
+        if (filtroAcao) url.searchParams.append('filtro_acao', filtroAcao);
+
+        try {
+            const response = await fetch(url);
+            if (!response.ok) throw new Error('Erro na resposta do servidor.');
+            
+            const data = await response.json();
+            
+            renderTable(data.logs);
+            renderPagination(data.page, data.total_pages, data.total_logs);
+
+        } catch (error) {
+            console.error("Erro ao buscar logs:", error);
+            tableBody.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-red-400">Falha ao carregar os logs.</td></tr>`;
+        } finally {
+            // Restaura o botão de busca
+            btnBuscar.disabled = false;
+            btnBuscar.querySelector('#icone-buscar').classList.remove('hidden');
+            btnBuscar.querySelector('#icone-loading').classList.add('hidden');
+        }
+    }
+
+    // --- Função para Renderizar a Tabela ---
+    function renderTable(logs) {
+        tableBody.innerHTML = ''; // Limpa a tabela
+        if (!logs || logs.length === 0) {
+            tableBody.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-gray-500">🚫 Nenhum log encontrado para os filtros selecionados.</td></tr>`;
+            return;
+        }
+
+        const brTimeZone = 'America/Sao_Paulo';
+        logs.forEach(log => {
+            // Converte a data UTC para a data local do Brasil
+            const timestamp = new Date(log.timestamp).toLocaleString('pt-BR', { timeZone: brTimeZone });
+
+            const row = `
+                <tr class="odd:bg-gray-800/60 even:bg-gray-800/30 hover:bg-gray-700/80 transition-colors">
+                    <td class="py-3 px-4 font-medium text-white">${log.usuario_nome}</td>
+                    <td class="py-3 px-4 text-cyan-300 font-semibold">${log.acao}</td>
+                    <td class="py-3 px-4 text-gray-400 max-w-md truncate">${log.detalhes || '--'}</td>
+                    <td class="py-3 px-4 whitespace-nowrap text-gray-400">${timestamp}</td>
+                </tr>
+            `;
+            tableBody.insertAdjacentHTML('beforeend', row);
+        });
+    }
+
+    // --- Função para Renderizar a Paginação ---
+    function renderPagination(page, total_pages, total_logs) {
+        paginationControls.innerHTML = '';
+        if (total_logs === 0) return;
+
+        let paginationHtml = `
+            <div>
+                <span class="text-sm text-gray-400">
+                    Página ${page} de ${total_pages} (${total_logs} registros)
+                </span>
+            </div>
+            <div class="flex gap-2">
+        `;
+
+        if (page > 1) {
+            paginationHtml += `<button data-page="${page - 1}" class="page-btn px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-md shadow-md text-sm transition">&larr; Anterior</button>`;
+        }
+        if (page < total_pages) {
+            paginationHtml += `<button data-page="${page + 1}" class="page-btn px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-md shadow-md text-sm transition">Próxima &rarr;</button>`;
+        }
+        
+        paginationHtml += `</div>`;
+        paginationControls.innerHTML = paginationHtml;
+
+        // Adiciona listeners aos novos botões de paginação
+        document.querySelectorAll('.page-btn').forEach(button => {
+            button.addEventListener('click', (e) => {
+                const newPage = e.target.dataset.page;
+                fetchLogs(newPage);
+            });
+        });
+    }
+
+    // --- Listeners dos Filtros ---
+    formFiltros.addEventListener('submit', (event) => {
+        event.preventDefault(); // Impede o recarregamento da página
+        fetchLogs(1); // Ao filtrar, sempre volta para a primeira página
+    });
+
+    btnLimpar.addEventListener('click', () => {
+        filtroUsuarioInput.value = '';
+        filtroAcaoSelect.value = '';
+        fetchLogs(1); // Limpa e busca a primeira página sem filtros
+    });
+
+    // --- Carga Inicial ---
+    fetchLogs();
+});
+</script>
+{% endblock %}

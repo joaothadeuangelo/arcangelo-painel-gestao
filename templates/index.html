@@ -1,0 +1,255 @@
+{% extends "base.html" %}
+
+{% block title %}Módulos - ARCSYS PAINEL{% endblock %}
+
+{% block head_extra %}
+    <link rel="preload" as="image" href="{{ url_for('static', filename='icons/placa.png') }}">
+    <link rel="preload" as="image" href="{{ url_for('static', filename='icons/modelo.png') }}">
+    <link rel="preload" as="image" href="{{ url_for('static', filename='icons/facial.png') }}">
+    
+    <style>
+        .module-icon { aspect-ratio: 1/1; }
+    </style>
+{% endblock %}
+
+{# === NOVO BLOCO: Controla a largura e o alinhamento central da área de Módulos === #}
+{% block main_class %}w-full max-w-7xl mx-auto flex-grow p-4 md:p-6 transition-all duration-300{% endblock %}
+
+{% block content %}
+<div class="w-full flex flex-col items-center justify-center space-y-8 mt-8 md:mt-12 animate-fade-in-up">
+    <div class="px-4 w-full">
+    
+        <div class="w-full mb-6">
+            <h3 class="text-2xl font-bold text-center text-gray-200 tracking-wide">Módulos do Sistema</h3>
+            <div class="w-16 h-1 mx-auto mt-3 bg-blue-600 rounded-full opacity-50"></div>
+        </div>
+
+        <div class="max-w-6xl mx-auto">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 justify-center" id="modulesGrid">
+
+                {% for mod in modulos %}
+                
+                {# --- FILTRO DE EXIBIÇÃO: Pula módulos de CPF --- #}
+                {% if 'CPF' not in mod.titulo|upper %}
+
+                    {% set is_online = (mod.status == 'online') %}
+                    {% set can_access = (is_online or current_user.admin) %}
+                    {% set link_url = url_for(mod.rota) if can_access else '#' %}
+                    
+                    <div class="relative group h-full transform transition-all duration-200 hover:-translate-y-1">
+                        
+                        <a href="{{ link_url }}" class="block h-full {% if not can_access %}cursor-not-allowed{% endif %}">
+                            <div class="relative h-full bg-gray-800 border border-gray-700 hover:border-blue-500/50 p-5 rounded-xl shadow-sm text-center transition-colors overflow-hidden flex flex-col items-center
+                                {% if not is_online %} opacity-70 grayscale-[0.5] hover:border-red-500/30 {% endif %}">
+                                
+                                <div class="absolute top-3 right-3 px-1.5 py-0.5 rounded text-[9px] font-bold tracking-wider flex items-center gap-1 z-10 border
+                                    {% if is_online %} bg-green-900/40 border-green-500/30 text-green-400
+                                    {% else %} bg-red-900/40 border-red-500/30 text-red-400 {% endif %}">
+                                    <span class="w-1.5 h-1.5 rounded-full {% if is_online %}bg-green-500{% else %}bg-red-500{% endif %}"></span>
+                                    {{ 'ONLINE' if is_online else 'OFF' }}
+                                </div>
+
+                                <div class="w-16 h-16 mb-4 bg-gray-700/30 border border-gray-600 rounded-lg flex items-center justify-center shadow-sm overflow-hidden relative p-2 transition-all duration-300
+                                     {% if is_online %}group-hover:bg-gray-700/50 group-hover:border-blue-500/50{% endif %}">
+                                    
+                                    {% if 'PLACA' in mod.titulo|upper %}
+                                        <img src="{{ url_for('static', filename='icons/placa.png') }}" 
+                                             class="w-full h-full object-contain drop-shadow-md transform group-hover:scale-110 transition-transform module-icon"
+                                             alt="Placa" fetchpriority="high" loading="eager"
+                                             onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                                        <span class="text-3xl hidden">{{ mod.icone }}</span>
+
+                                    {% elif 'MODELO' in mod.titulo|upper %}
+                                        <img src="{{ url_for('static', filename='icons/modelo.png') }}" 
+                                             class="w-full h-full object-contain drop-shadow-md transform group-hover:scale-110 transition-transform module-icon"
+                                             alt="Modelo" fetchpriority="high" loading="eager"
+                                             onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                                        <span class="text-3xl hidden">{{ mod.icone }}</span>
+
+                                    {% elif 'FACIAL' in mod.titulo|upper %}
+                                        <img src="{{ url_for('static', filename='icons/facial.png') }}" 
+                                             class="w-full h-full object-contain drop-shadow-md transform group-hover:scale-110 transition-transform module-icon"
+                                             alt="Facial" fetchpriority="high" loading="eager"
+                                             onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                                        <span class="text-3xl hidden">{{ mod.icone }}</span>
+
+                                    {% else %}
+                                        <span class="text-3xl filter drop-shadow-md">{{ mod.icone }}</span>
+                                    {% endif %}
+
+                                </div>
+
+                                <h3 class="text-lg font-bold mb-2 text-gray-100 group-hover:text-blue-300 transition-colors">
+                                    {{ mod.titulo }}
+                                </h3>
+                                <p class="text-xs text-gray-500 leading-snug">
+                                    {{ mod.descricao }}
+                                </p>
+                            </div>
+                        </a>
+
+                        {% if current_user.admin %}
+                        <div class="absolute bottom-3 right-3 z-20 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onclick="openStatusModal({{ mod.id }}, '{{ mod.status }}', '{{ mod.titulo }}')" 
+                                    class="bg-gray-700 hover:bg-gray-600 text-white p-1.5 rounded shadow border border-gray-500 text-[10px]"
+                                    title="Gerenciar Status">
+                                ⚙️
+                            </button>
+                        </div>
+                        {% endif %}
+
+                    </div>
+                
+                {% endif %} {% endfor %}
+
+            </div>
+        </div>
+    </div>
+</div>
+
+{% include "includes/modals_index.html" ignore missing %}
+
+<div id="developmentModal" class="fixed inset-0 bg-black/90 z-[70] hidden flex items-center justify-center p-4">
+    <div class="bg-gray-900 border border-cyan-500/30 rounded-xl shadow-2xl max-w-md w-full relative overflow-hidden">
+        <div class="absolute top-0 left-0 w-full h-1 bg-cyan-600"></div>
+        <div class="p-6 text-center">
+            <h3 class="text-lg font-bold text-white mb-2">Painel Beta</h3>
+            <p class="text-gray-400 text-xs mb-4">Versão de testes. Podem ocorrer instabilidades.</p>
+            
+            <label class="flex items-center justify-center gap-2 cursor-pointer mb-4">
+                <input type="checkbox" id="dontShowAgain" class="w-3 h-3 rounded border-gray-600 bg-gray-800 text-cyan-600 focus:ring-cyan-500 focus:ring-offset-gray-900">
+                <span class="text-xs text-gray-500">Não mostrar novamente</span>
+            </label>
+
+            <button onclick="closeDevModal()" class="w-full bg-cyan-700 hover:bg-cyan-600 text-white font-bold py-2 px-4 rounded transition-colors text-sm">
+                ENTRAR
+            </button>
+        </div>
+    </div>
+</div>
+
+<div id="statusModal" class="fixed inset-0 bg-black/90 z-[60] hidden flex items-center justify-center p-4">
+    <div class="bg-gray-900 border border-gray-700 rounded-xl shadow-2xl max-w-sm w-full relative overflow-hidden">
+        <div id="statusModalHeaderBar" class="absolute top-0 left-0 w-full h-1 bg-blue-500"></div>
+        <div class="p-5 text-center">
+            <h3 class="text-lg font-bold text-white mb-1">Gerenciar Módulo</h3>
+            <p class="text-gray-400 text-sm mb-4">
+                <span id="modalModuleName" class="text-white font-semibold">---</span><br>
+                Novo Status: <span id="modalTargetStatus" class="font-bold uppercase text-xs">---</span>
+            </p>
+            <div class="flex gap-2 text-sm">
+                <button onclick="closeStatusModal()" class="flex-1 bg-gray-700 hover:bg-gray-600 text-gray-200 font-semibold py-2 px-3 rounded">Cancelar</button>
+                <button id="btnConfirmStatus" onclick="executeToggle()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-3 rounded flex justify-center items-center gap-2">
+                    Confirmar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}
+
+{% block scripts %}
+{{ super() }}
+
+<script>
+    let pendingModuleId = null;
+
+    document.addEventListener('DOMContentLoaded', () => {
+        // Verifica se o usuário já marcou para não ver o modal Beta
+        const hideModal = localStorage.getItem('hide_beta_modal');
+        if (!hideModal) { 
+            const devModal = document.getElementById('developmentModal'); 
+            if (devModal) devModal.classList.remove('hidden'); 
+        }
+    });
+
+    // Função local: Fechar modal Dev
+    window.closeDevModal = function() {
+        const modal = document.getElementById('developmentModal');
+        const checkbox = document.getElementById('dontShowAgain');
+        
+        if (checkbox && checkbox.checked) {
+            localStorage.setItem('hide_beta_modal', 'true');
+        }
+        
+        modal.classList.add('hidden');
+    }
+
+    // --- Funções do Modal de Status (Admin) ---
+    window.openStatusModal = function(id, currentStatus, title) {
+        pendingModuleId = id;
+        const modal = document.getElementById('statusModal');
+        const nameSpan = document.getElementById('modalModuleName');
+        const statusSpan = document.getElementById('modalTargetStatus');
+        const headerBar = document.getElementById('statusModalHeaderBar');
+        const confirmBtn = document.getElementById('btnConfirmStatus');
+
+        nameSpan.textContent = title;
+
+        if (currentStatus === 'online') {
+            statusSpan.textContent = "EM MANUTENÇÃO";
+            statusSpan.className = "font-bold uppercase text-red-400 text-xs";
+            headerBar.className = "absolute top-0 left-0 w-full h-1 bg-red-500";
+            
+            confirmBtn.className = "flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-3 rounded";
+            confirmBtn.innerHTML = "Desativar";
+        } else {
+            statusSpan.textContent = "ONLINE";
+            statusSpan.className = "font-bold uppercase text-green-400 text-xs";
+            headerBar.className = "absolute top-0 left-0 w-full h-1 bg-green-500";
+            
+            confirmBtn.className = "flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-3 rounded";
+            confirmBtn.innerHTML = "Ativar";
+        }
+        modal.classList.remove('hidden');
+    }
+
+    window.closeStatusModal = function() { 
+        document.getElementById('statusModal').classList.add('hidden'); 
+        pendingModuleId = null; 
+    }
+
+    window.executeToggle = async function() {
+        if (!pendingModuleId) return;
+        
+        const btn = document.getElementById('btnConfirmStatus');
+        const originalText = btn.innerHTML;
+        
+        btn.disabled = true; 
+        btn.innerHTML = `<svg class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>`;
+
+        try {
+            const response = await fetch(`/admin/toggle-modulo/${pendingModuleId}`, {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json', 
+                    'X-CSRFToken': "{{ csrf_token() }}" 
+                }
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok && data.success) { 
+                window.location.reload(); 
+            } else { 
+                alert("Erro: " + (data.error || "Erro desconhecido.")); 
+                btn.disabled = false; 
+                btn.innerHTML = originalText; 
+                closeStatusModal(); 
+            }
+        } catch (e) { 
+            console.error(e); 
+            alert("Erro de conexão."); 
+            btn.disabled = false; 
+            btn.innerHTML = originalText; 
+            closeStatusModal(); 
+        }
+    }
+
+    // Fecha modal ao clicar fora
+    window.addEventListener('click', (e) => { 
+        const statusModal = document.getElementById('statusModal'); 
+        if (e.target === statusModal) closeStatusModal(); 
+    });
+</script>
+{% endblock scripts %}

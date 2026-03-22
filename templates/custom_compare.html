@@ -1,0 +1,390 @@
+{% extends "base.html" %}
+
+{% block title %}Comparador Facial - ARCSYS{% endblock %}
+
+{# --- 1. REMOVE SIDEBAR E WHATSAPP PARA FOCO TOTAL --- #}
+{% block sidebar_toggle %}{% endblock %}
+{% block whatsapp_button %}{% endblock %}
+
+{% block content %}
+<style>
+    .drag-active {
+        background-color: rgba(59, 130, 246, 0.1) !important;
+        border-color: #3b82f6 !important;
+        transform: scale(1.01);
+    }
+    .animate-fade-in { animation: fadeInOnly 0.6s ease-out forwards; }
+    @keyframes fadeInOnly { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    
+    /* Scrollbar */
+    .custom-scroll::-webkit-scrollbar { width: 6px; }
+    .custom-scroll::-webkit-scrollbar-track { background: #111827; }
+    .custom-scroll::-webkit-scrollbar-thumb { background: #374151; border-radius: 10px; }
+</style>
+
+<div id="localToast" class="fixed top-5 right-5 z-50 hidden transition-all duration-500 transform translate-y-[-20px] opacity-0">
+    <div id="localToastMsg" class="bg-gray-800 text-white px-6 py-4 rounded-xl shadow-2xl flex items-center gap-4 border-l-4"></div>
+</div>
+
+<div class="max-w-6xl mx-auto pb-20 px-4">
+
+    <div class="flex flex-col md:flex-row items-center justify-between mb-8 mt-6 gap-4">
+        <a href="{{ url_for('main.home') }}" class="group flex items-center gap-2 text-gray-400 hover:text-white transition-all bg-gray-800/50 hover:bg-gray-800 px-5 py-2.5 rounded-xl border border-gray-700 hover:border-gray-600">
+            <svg class="w-5 h-5 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+            <span class="font-medium">Voltar ao Painel</span>
+        </a>
+        <h1 class="text-2xl md:text-3xl font-light text-gray-100 tracking-wider uppercase text-center">
+            Comparador <span class="font-bold text-blue-500">SIMILAR FACE</span>
+        </h1>
+        <div class="w-32 hidden md:block"></div>
+    </div>
+
+    <div class="bg-gray-800 border border-gray-700 rounded-2xl p-6 md:p-8 shadow-2xl relative overflow-hidden mb-8">
+        <form id="formComparacao" class="relative z-10">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+                
+                <div class="flex flex-col h-full">
+                    <label class="flex items-center gap-2 text-gray-400 text-sm font-bold mb-3 uppercase tracking-wider">
+                        <span class="bg-blue-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs">1</span>
+                        Foto Alvo (Referência)
+                    </label>
+                    <div id="dropZoneBase" class="h-64 bg-gray-900/50 border-2 border-dashed border-gray-600 rounded-xl hover:border-blue-500 hover:bg-gray-900 transition-all cursor-pointer flex flex-col items-center justify-center relative group overflow-hidden">
+                        <div id="contentBase" class="text-center p-6 group-hover:scale-105 transition-transform">
+                            <div class="text-4xl mb-3">📸</div>
+                            <p class="text-gray-400 text-sm font-medium">Clique ou arraste a foto alvo</p>
+                        </div>
+                        <div id="previewBase" class="hidden absolute inset-0 bg-gray-900 flex items-center justify-center">
+                            <img id="imgPreviewBase" class="h-full w-full object-contain p-2">
+                            <button type="button" onclick="resetInput('Base')" class="absolute top-2 right-2 bg-red-600/80 hover:bg-red-500 text-white p-1.5 rounded-lg shadow-lg transition-transform hover:scale-110 z-20">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                            </button>
+                        </div>
+                        <input type="file" id="inputBase" name="minha_imagem_base" accept="image/*" class="hidden" required>
+                    </div>
+                </div>
+
+                <div class="flex flex-col h-full">
+                    <label class="flex justify-between items-center text-gray-400 text-sm font-bold mb-3 uppercase tracking-wider">
+                        <div class="flex items-center gap-2">
+                            <span class="bg-gray-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs">2</span>
+                            Banco de Imagens
+                        </div>
+                        <span id="contadorBanco" class="text-xs bg-blue-900/30 text-blue-400 px-2 py-0.5 rounded border border-blue-500/20 hidden">0 fotos</span>
+                    </label>
+                    <div id="dropZoneBanco" class="h-64 bg-gray-900/50 border-2 border-dashed border-gray-600 rounded-xl hover:border-green-500 hover:bg-gray-900 transition-all cursor-pointer flex flex-col items-center justify-center relative group overflow-hidden">
+                        <div id="contentBanco" class="text-center p-6 group-hover:scale-105 transition-transform">
+                            <div class="text-4xl mb-3">📂</div>
+                            <p class="text-gray-400 text-sm font-medium">Selecione a pasta de fotos</p>
+                            <p class="text-gray-600 text-xs mt-1">Máx: 500 arquivos</p>
+                        </div>
+                        <div id="previewBanco" class="hidden absolute inset-0 bg-gray-900 p-2 overflow-y-auto custom-scroll">
+                            <div id="gridBanco" class="grid grid-cols-4 gap-1"></div>
+                            <div class="sticky bottom-0 left-0 right-0 pt-2 flex justify-center bg-gradient-to-t from-gray-900 via-gray-900 to-transparent pointer-events-none">
+                                <button type="button" onclick="resetInput('Banco')" class="pointer-events-auto bg-red-600 hover:bg-red-500 text-white px-3 py-1 rounded text-xs font-bold shadow-lg">LIMPAR</button>
+                            </div>
+                        </div>
+                        <input type="file" id="inputBanco" name="minhas_imagens_comparar" multiple accept="image/*" class="hidden" required>
+                    </div>
+                </div>
+            </div>
+
+            <button type="submit" id="btnProcessar" data-mode="submit" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 px-6 rounded-xl shadow-lg transition-all duration-200 uppercase tracking-wide flex items-center justify-center gap-3 active:scale-[0.98]">
+                <span id="btnIcon">🔍</span> 
+                <span id="btnText">INICIAR COMPARAÇÃO</span>
+            </button>
+        </form>
+    </div>
+
+    <div id="resultadoFinal" class="hidden animate-fade-in scroll-mt-10">
+        
+        <div class="flex justify-between items-center mb-4 px-2">
+            <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                Resultados Encontrados
+                <span id="badgeTotal" class="text-sm bg-gray-800 text-gray-400 px-2 py-0.5 rounded border border-gray-700">0</span>
+            </h2>
+            <select id="filtroQtd" class="bg-gray-800 border border-gray-700 text-gray-300 py-1 px-3 rounded text-sm focus:outline-none focus:border-blue-500">
+                <option value="10" selected>Top 10</option>
+                <option value="50">Top 50</option>
+                <option value="all">Todos</option>
+            </select>
+        </div>
+
+        <div class="bg-gray-900 border border-gray-700 rounded-xl overflow-hidden shadow-xl">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left">
+                    <thead class="bg-gray-800 text-gray-400 text-xs uppercase font-bold tracking-wider">
+                        <tr>
+                            <th class="p-4 w-32 text-center">FOTO</th>
+                            <th class="p-4">NOME DO ARQUIVO</th>
+                            <th class="p-4 w-32 text-center">SIMILARIDADE</th>
+                            </tr>
+                    </thead>
+                    <tbody id="tabelaResultados" class="divide-y divide-gray-800 text-sm text-gray-300">
+                        </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // --- GLOBAIS ---
+    const LIMITE_MAXIMO = 500;
+    let RESULTADOS_GLOBAIS = [];
+    let IMAGEM_BASE_URL = ''; 
+    let CACHE_BANCO_FILES = [];
+
+    // --- FUNÇÃO DE MATCH DE ARQUIVOS ---
+    function encontrarArquivoLocal(serverName) {
+        const sName = serverName.toLowerCase().trim();
+        return CACHE_BANCO_FILES.find(f => {
+            const bName = f.name.toLowerCase().trim();
+            if (bName === sName) return true;
+            if (bName.startsWith(sName)) return true;
+            const bNameNoExt = bName.substring(0, bName.lastIndexOf('.'));
+            if (bNameNoExt === sName) return true;
+            return false;
+        });
+    }
+
+    // --- TOAST SYSTEM ---
+    function avisoLocal(msg, tipo='erro') {
+        const toast = document.getElementById('localToast');
+        const content = document.getElementById('localToastMsg');
+        const cfg = {
+            sucesso: { border: 'border-green-500', icon: '✅', text: 'text-green-400' },
+            erro: { border: 'border-red-500', icon: '❌', text: 'text-red-400' },
+            aviso: { border: 'border-yellow-500', icon: '⚠️', text: 'text-yellow-400' },
+        };
+        const c = cfg[tipo] || cfg.erro;
+        content.className = `bg-gray-800 text-white px-6 py-4 rounded-xl shadow-2xl flex items-center gap-4 border-l-4 ${c.border}`;
+        content.innerHTML = `<span class="${c.text} text-xl">${c.icon}</span><span class="font-medium">${msg}</span>`;
+        
+        toast.classList.remove('hidden', 'translate-y-[-20px]', 'opacity-0');
+        toast.classList.add('translate-y-0', 'opacity-100');
+        setTimeout(() => {
+            toast.classList.replace('translate-y-0', 'translate-y-[-20px]');
+            toast.classList.replace('opacity-100', 'opacity-0');
+            setTimeout(() => toast.classList.add('hidden'), 500);
+        }, 4000);
+    }
+
+    // --- UPLOAD ---
+    function setupInput(dropId, inputId, tipo) {
+        const drop = document.getElementById(dropId);
+        const input = document.getElementById(inputId);
+
+        drop.addEventListener('click', (e) => { if(e.target.tagName !== 'BUTTON') input.click(); });
+        drop.addEventListener('dragover', (e) => { e.preventDefault(); drop.classList.add('drag-active'); });
+        drop.addEventListener('dragleave', () => drop.classList.remove('drag-active'));
+        drop.addEventListener('drop', (e) => {
+            e.preventDefault();
+            drop.classList.remove('drag-active');
+            input.files = e.dataTransfer.files;
+            processFiles(input.files, tipo);
+        });
+        input.addEventListener('change', () => processFiles(input.files, tipo));
+    }
+
+    function processFiles(files, tipo) {
+        if (!files.length) return;
+
+        if (tipo === 'Banco') {
+            if (files.length > LIMITE_MAXIMO) {
+                avisoLocal(`Limite de ${LIMITE_MAXIMO} imagens excedido!`, 'erro');
+                resetInput('Banco');
+                return;
+            }
+            CACHE_BANCO_FILES = Array.from(files);
+            document.getElementById('contentBanco').classList.add('hidden');
+            document.getElementById('previewBanco').classList.remove('hidden');
+            document.getElementById('contadorBanco').textContent = `${files.length} fotos`;
+            document.getElementById('contadorBanco').classList.remove('hidden');
+            
+            const grid = document.getElementById('gridBanco');
+            grid.innerHTML = '';
+            for(let i=0; i<Math.min(files.length, 12); i++) {
+                grid.innerHTML += `<img src="${URL.createObjectURL(files[i])}" class="w-full h-16 object-cover rounded bg-gray-800 border border-gray-700">`;
+            }
+        } else {
+            IMAGEM_BASE_URL = URL.createObjectURL(files[0]);
+            document.getElementById('contentBase').classList.add('hidden');
+            document.getElementById('previewBase').classList.remove('hidden');
+            document.getElementById('imgPreviewBase').src = IMAGEM_BASE_URL;
+        }
+    }
+
+    function resetInput(tipo) {
+        document.getElementById(`input${tipo}`).value = "";
+        document.getElementById(`content${tipo}`).classList.remove('hidden');
+        document.getElementById(`preview${tipo}`).classList.add('hidden');
+        if(tipo === 'Banco') {
+            CACHE_BANCO_FILES = [];
+            document.getElementById('contadorBanco').classList.add('hidden');
+            document.getElementById('gridBanco').innerHTML = '';
+        } else {
+            IMAGEM_BASE_URL = '';
+            document.getElementById('imgPreviewBase').src = '';
+        }
+    }
+
+    setupInput('dropZoneBase', 'inputBase', 'Base');
+    setupInput('dropZoneBanco', 'inputBanco', 'Banco');
+
+    // --- SUBMISSÃO E LOOP DE STATUS ---
+    document.getElementById('formComparacao').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const btn = document.getElementById('btnProcessar');
+        const btnText = document.getElementById('btnText');
+
+        if (btn.dataset.mode === 'reset') { window.location.reload(); return; }
+
+        const originalText = btnText.innerText;
+        btn.disabled = true;
+        btn.classList.add('opacity-50', 'cursor-not-allowed');
+        btnText.innerText = "ENVIANDO IMAGENS...";
+        document.getElementById('resultadoFinal').classList.add('hidden');
+
+        try {
+            const formData = new FormData(this);
+            const response = await fetch("{{ url_for('consultas.iniciar_comparacao') }}", { method: 'POST', body: formData });
+            const data = await response.json();
+
+            if (response.status === 429) throw new Error("Aguarde um momento.");
+            if (data.error) throw new Error(data.error);
+
+            btnText.innerText = "ANALISANDO...";
+            let tentativas = 0;
+            const intervalo = setInterval(async () => {
+                tentativas++;
+                try {
+                    const statusUrl = "{{ url_for('consultas.verificar_status', task_id='') }}" + data.task_id;
+                    const poll = await fetch(statusUrl);
+                    if(poll.status === 429) return;
+                    
+                    const res = await poll.json();
+                    const finished = (res.result?.results?.length > 0) || (res.peding_data?.results?.length > 0) || res.task_status === 'SUCCESS';
+
+                    if (finished) {
+                        clearInterval(intervalo);
+                        exibirResultados(res, btn);
+                        avisoLocal("Análise concluída!", "sucesso");
+                    } else if (res.task_status === 'FAILURE' || tentativas > 60) {
+                        throw new Error("Tempo excedido.");
+                    }
+                } catch(err) { 
+                    clearInterval(intervalo);
+                    avisoLocal("Erro no processamento.", 'erro');
+                    restaurarBotao(btn, btnText, originalText);
+                }
+            }, 2000);
+
+        } catch (error) {
+            avisoLocal(error.message, 'erro');
+            restaurarBotao(btn, btnText, originalText);
+        }
+    });
+
+    function restaurarBotao(btn, span, txt) {
+        btn.disabled = false;
+        span.innerText = txt;
+        btn.classList.remove('opacity-50', 'cursor-not-allowed');
+    }
+
+    function exibirResultados(data, btn) {
+        const btnText = document.getElementById('btnText');
+        btnText.innerText = "NOVA COMPARAÇÃO";
+        document.getElementById('btnIcon').innerText = "↺";
+        btn.dataset.mode = 'reset';
+        btn.disabled = false;
+        btn.classList.remove('opacity-50', 'cursor-not-allowed');
+        btn.classList.add('bg-gray-700', 'hover:bg-gray-600');
+
+        let lista = data.result?.results || data.peding_data?.results || [];
+        lista.sort((a, b) => b.similarity - a.similarity);
+        RESULTADOS_GLOBAIS = lista;
+
+        renderizarTabela();
+        
+        const divRes = document.getElementById('resultadoFinal');
+        divRes.classList.remove('hidden');
+        divRes.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    // --- NOVA FUNÇÃO DE COPIAR ---
+    window.copiarNome = function(texto, btn) {
+        navigator.clipboard.writeText(texto).then(() => {
+            // Feedback Visual
+            const originalIcon = btn.innerHTML;
+            btn.innerHTML = `<svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`;
+            setTimeout(() => {
+                btn.innerHTML = originalIcon;
+            }, 1500);
+        }).catch(err => {
+            console.error('Erro ao copiar', err);
+        });
+    }
+
+    // --- RENDERIZAÇÃO DA TABELA (MODIFICADA) ---
+    function renderizarTabela() {
+        const tbody = document.getElementById('tabelaResultados');
+        const filtro = document.getElementById('filtroQtd').value;
+        tbody.innerHTML = '';
+
+        const lista = (filtro === 'all') ? RESULTADOS_GLOBAIS : RESULTADOS_GLOBAIS.slice(0, parseInt(filtro));
+        document.getElementById('badgeTotal').innerText = lista.length;
+
+        if (lista.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="3" class="p-8 text-center text-gray-500">Nenhum rosto similar encontrado.</td></tr>';
+            return;
+        }
+
+        lista.forEach(item => {
+            // Cores baseadas na similaridade
+            let color = 'text-gray-400';
+            let badgeBg = 'bg-gray-800';
+            if (item.similarity >= 90) { color = 'text-green-400'; badgeBg = 'bg-green-900/30 border-green-500/30'; }
+            else if (item.similarity >= 70) { color = 'text-blue-400'; badgeBg = 'bg-blue-900/30 border-blue-500/30'; }
+            else if (item.similarity >= 50) { color = 'text-yellow-400'; badgeBg = 'bg-yellow-900/30 border-yellow-500/30'; }
+
+            const file = encontrarArquivoLocal(item.name);
+            const imgUrl = file ? URL.createObjectURL(file) : '';
+            // Remove extensão e força CAIXA ALTA
+            const cleanName = item.name.replace(/\.[^/.]+$/, "").toUpperCase(); 
+
+            const row = `
+                <tr class="hover:bg-gray-800/50 transition-colors border-b border-gray-800">
+                    <td class="p-4 text-center">
+                        <div class="h-20 w-20 rounded-lg overflow-hidden border border-gray-600 mx-auto bg-gray-900 flex items-center justify-center shadow-lg">
+                            ${imgUrl ? `<img src="${imgUrl}" class="h-full w-full object-cover transform hover:scale-110 transition-transform duration-300">` : '<span class="text-xs text-gray-500">?</span>'}
+                        </div>
+                    </td>
+                    
+                    <td class="p-4 align-middle">
+                        <div class="flex items-center gap-3">
+                            <span class="font-bold text-gray-200 text-lg tracking-wide">${cleanName}</span>
+                            <button onclick="copiarNome('${cleanName}', this)" class="text-gray-600 hover:text-white bg-gray-800 hover:bg-gray-700 p-2 rounded-lg transition-all border border-gray-700" title="Copiar Nome">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                            </button>
+                        </div>
+                    </td>
+
+                    <td class="p-4 text-center align-middle">
+                        <span class="px-4 py-1.5 rounded-full text-sm font-bold border ${badgeBg} ${color} shadow-sm">
+                            ${Math.round(item.similarity)}%
+                        </span>
+                    </td>
+                </tr>
+            `;
+            tbody.innerHTML += row;
+        });
+    }
+
+    document.getElementById('filtroQtd').addEventListener('change', renderizarTabela);
+</script>
+{% endblock %}

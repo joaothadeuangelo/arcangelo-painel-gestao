@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+
+{% block title %}ARCANGELO PAINEL - Login{% endblock %}
+
+{# 1. Substitui a cor de fundo padrão pelo gradiente e centraliza tudo #}
+{% block body_class %}bg-gradient-to-br from-gray-900 to-slate-800 text-white min-h-screen flex flex-col items-center justify-center relative p-4{% endblock %}
+
+{# 2. Sobrescreve o layout inteiro, removendo o Menu Lateral e Botão do WhatsApp #}
+{% block layout %}
+<div class="flex flex-col items-center justify-center w-full animate-fade-in-up">
+
+    <div id="card-container" class="bg-gray-800 rounded-xl shadow-lg w-full max-w-md border border-gray-700">
+        <div class="p-8">
+            
+            <div class="flex flex-col items-center justify-center mb-6">
+                <svg class="h-12 w-12 text-cyan-400 mb-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M14.25 9.75L16.5 12l-2.25 2.25m-4.5 0L7.5 12l2.25-2.25M6 20.25h12A2.25 2.25 0 0020.25 18V6A2.25 2.25 0 0018 3.75H6A2.25 2.25 0 003.75 6v12A2.25 2.25 0 006 20.25z" />
+                </svg>
+                
+                <h1 class="text-2xl font-bold text-white tracking-wide">
+                    ARCANGELO <span class="text-cyan-400">PAINEL</span>
+                </h1>
+            </div>
+            
+            <form id="login-form" method="POST" class="flex flex-col gap-4 text-left">
+                {{ form.hidden_tag() }}
+                
+                <p class="text-center text-gray-400 text-sm mb-2">Entre com suas credenciais.</p>
+
+                <div id="error-container" class="empty:hidden">
+                    {% if mensagem_erro %}
+                    <div class="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-2 rounded text-center text-sm">
+                        {{ mensagem_erro }}
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <label for="email" class="sr-only">Email</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <svg class="h-5 w-5 text-gray-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" /><path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" /></svg>
+                        </div>
+                        {{ form.email(id="email", required=True, placeholder="Email", class="w-full py-2.5 px-4 pl-10 rounded bg-gray-700 text-white border border-gray-600 focus:outline-none focus:border-cyan-500 placeholder-gray-500") }}
+                    </div>
+                </div>
+
+                <div>
+                    <label for="senha" class="sr-only">Senha</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <svg class="h-5 w-5 text-gray-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd" /></svg>
+                        </div>
+                        {{ form.senha(id="senha", required=True, placeholder="Senha", class="w-full py-2.5 px-4 pl-10 pr-10 rounded bg-gray-700 text-white border border-gray-600 focus:outline-none focus:border-cyan-500 placeholder-gray-500") }}
+                        
+                        <button type="button" id="toggleSenha" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-white">
+                            <svg id="eyeIcon" class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path d="M10 12a2 2 0 100-4 2 2 0 000 4z" /><path fill-rule="evenodd" d="M.458 10C3.732 4.943 9.522 3 10 3s6.268 1.943 9.542 7c-3.274 5.057-9.03 7-9.542 7S3.732 15.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd" /></svg>
+                            <svg id="eyeOffIcon" class="h-5 w-5 hidden" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C16.268 4.943 10.478 3 10 3a9.958 9.958 0 00-4.512 1.074l-1.78-1.781zm4.261 4.26l1.514 1.515a2.003 2.003 0 012.45 2.45l1.514 1.514a4 4 0 00-5.478-5.478z" clip-rule="evenodd" /><path d="M12.454 16.697L9.75 13.992a4 4 0 01-3.742-3.742L2.293 6.546A10.004 10.004 0 00.458 10c3.274 5.057 9.03 7 9.542 7 1.852 0 3.597-.506 5.046-1.392l-1.598-1.598a8.003 8.003 0 01-3.546.697z" /></svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="flex justify-center my-2">
+                    <div class="cf-turnstile" 
+                         data-sitekey="{{ site_key }}" 
+                         data-theme="dark"
+                         data-callback="onTurnstileSuccess"></div>
+                </div>
+                
+                <button id="submit-button" type="submit" class="mt-2 p-2.5 bg-blue-600 hover:bg-blue-500 rounded text-white font-semibold transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <div id="button-content" class="flex items-center justify-center gap-2">
+                        <span>Entrar</span>
+                        <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" /></svg>
+                    </div>
+                    <div id="button-spinner" class="hidden">
+                        <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                    </div>
+                </button>
+
+                <div class="mt-4 pt-4 border-t border-gray-700 text-center">
+                    <p class="text-sm text-gray-500 mb-2">Não tem uma conta?</p>
+                    <a href="https://wa.me/[SEU_WHATSAPP_AQUI]?text=Oi,%20gostaria%20de%20ter%20acesso%20ao%20ARCANGELO%20PAINEL." 
+                       target="_blank"
+                       class="inline-flex items-center gap-2 text-sm text-cyan-400 hover:text-cyan-300 transition-colors font-medium group">
+                        <span>Solicitar acesso ao painel</span>
+                        <svg class="w-4 h-4 transform group-hover:translate-x-1 transition-transform" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                        </svg>
+                    </a>
+                </div>
+
+            </form>
+        </div>
+    </div>
+
+    <footer class="mt-8 text-gray-500">
+        <p class="text-xs">&copy; <span id="current-year"></span> ARCANGELO PAINEL. Todos os direitos reservados.</p>
+    </footer>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+
+<script>
+    const CSRF_TOKEN = "{{ csrf_token() }}";
+
+    // Callback opcional se quiser habilitar o botão apenas após o desafio ser resolvido
+    function onTurnstileSuccess(token) {
+        console.log("Turnstile resolvido com sucesso.");
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+
+        const yearSpan = document.getElementById('current-year');
+        if (yearSpan) yearSpan.textContent = new Date().getFullYear();
+
+        const toggleBtn = document.getElementById('toggleSenha');
+        const senhaInput = document.getElementById('senha');
+        if (toggleBtn && senhaInput) {
+            toggleBtn.addEventListener('click', () => {
+                const type = senhaInput.getAttribute('type') === 'password' ? 'text' : 'password';
+                senhaInput.setAttribute('type', type);
+                document.getElementById('eyeIcon')?.classList.toggle('hidden');
+                document.getElementById('eyeOffIcon')?.classList.toggle('hidden');
+            });
+        }
+
+        const loginForm = document.getElementById('login-form');
+        
+        if (loginForm) {
+            loginForm.addEventListener('submit', async (event) => {
+                event.preventDefault();
+                
+                const errorContainer = document.getElementById('error-container');
+                const submitButton = document.getElementById('submit-button');
+                const buttonContent = document.getElementById('button-content');
+                const buttonSpinner = document.getElementById('button-spinner');
+
+                // Limpa erros e inicia loading
+                if (errorContainer) errorContainer.innerHTML = '';
+                submitButton.disabled = true;
+                buttonContent.classList.add('hidden');
+                buttonSpinner.classList.remove('hidden');
+
+                // FormData captura automaticamente o campo 'cf-turnstile-response'
+                const formData = new FormData(loginForm);
+
+                try {
+                    const response = await fetch("{{ url_for('auth.login') }}", {
+                        method: 'POST',
+                        body: formData,
+                        headers: { 
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'X-CSRFToken': CSRF_TOKEN 
+                        }
+                    });
+
+                    const result = await response.json();
+
+                    if (response.ok && result.success) {
+                        window.location.href = result.redirect_url;
+                    } else {
+                        // Se falhar, resetamos o widget para uma nova tentativa
+                        if (typeof turnstile !== 'undefined') {
+                            turnstile.reset();
+                        }
+                        throw new Error(result.error || 'Credenciais inválidas.');
+                    }
+
+                } catch (error) {
+                    console.error('Login Error:', error);
+                    submitButton.disabled = false;
+                    buttonContent.classList.remove('hidden');
+                    buttonSpinner.classList.add('hidden');
+
+                    if (errorContainer) {
+                        let msg = error.message;
+                        if (msg.includes('CSRF') || msg.includes('token')) {
+                            msg = "Sessão expirada. Recarregue a página.";
+                        }
+                        errorContainer.innerHTML = `
+                        <div class="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-2 rounded text-center text-sm animate-pulse" role="alert">
+                            ${msg}
+                        </div>`;
+                    }
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

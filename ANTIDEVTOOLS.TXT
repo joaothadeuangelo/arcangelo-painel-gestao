@@ -1,0 +1,48 @@
+// 1. PROTEÇÃO ANTI-DEVTOOLS (VERSÃO 3.0 - NÍVEL HARDCORE)
+      // --------------------------------------------------------
+
+      // Tática 1: Bloqueia atalhos de teclado (F12, etc) e Botão Direito
+      document.addEventListener('keydown', function(event) {
+          if (event.key === 'F12' ||
+             (event.ctrlKey && event.shiftKey && (event.key === 'I' || event.key === 'J' || event.key === 'C')) ||
+             (event.ctrlKey && event.key === 'U')) {
+              event.preventDefault();
+              window.location.replace("https://google.com");
+          }
+      });
+
+      document.addEventListener('contextmenu', function(event) {
+          event.preventDefault();
+      });
+
+      // Tática 2 e 3: O Vigia do DevTools (Rodando a cada 1 segundo)
+      setInterval(function() {
+          // Detecta se o usuário está em um dispositivo móvel (MANTIDO INTACTO)
+          const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+          // TESTE DE TAMANHO: Só executa se NÃO for mobile para evitar falsos positivos
+          if (!isMobile) {
+              const threshold = 160;
+              const widthDiff = window.outerWidth - window.innerWidth > threshold;
+              const heightDiff = window.outerHeight - window.innerHeight > threshold;
+
+              if (widthDiff || heightDiff) {
+                  window.location.replace("https://google.com");
+                  return; // ESSENCIAL: Interrompe o script na hora! Impede que o debugger congele o redirecionamento.
+              }
+          }
+
+          // ARMADILHA DO DEBUGGER: Funciona em desktop e mobile (remoto)
+          const startTime = performance.now();
+
+          // Se o DevTools estiver aberto, o navegador pausa aqui
+          // Tática do Quarto Escuro: Esconde o código original se ele for pausado em janela separada
+          (function() { return new Function('debugger')(); })();
+
+          const timeToRun = performance.now() - startTime;
+
+          // Se a execução demorou mais de 100ms, significa que o debugger travou a página
+          if (timeToRun > 100) {
+              window.location.replace("https://google.com");
+          }
+      }, 1000);

@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+
+{% block title %}Análise de Demandas{% endblock %}
+
+{# --- DESLIGA O MENU E O WHATSAPP NESSA TELA (APENAS UMA VEZ!) --- #}
+{% block sidebar %}{% endblock %}
+{% block whatsapp_button %}{% endblock %}
+
+{% block extra_css %}
+<style>
+    @media (max-width: 767px) {
+        .responsive-table thead { display: none; }
+        .responsive-table tbody, .responsive-table tr, .responsive-table td {
+            display: block; width: 100%;
+        }
+        .responsive-table-container tr {
+            margin-bottom: 1rem;
+            border: 1px solid #374151;
+            border-radius: 0.5rem;
+            overflow: hidden;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+        }
+        .responsive-table td {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 0.75rem 1rem; text-align: right; border-bottom: 1px solid #4B5563;
+        }
+        .responsive-table td:last-child { border-bottom: none; padding: 1rem; }
+        .responsive-table td::before {
+            content: attr(data-label); font-weight: 600; text-align: left;
+            margin-right: 1rem; color: #9CA3AF;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="bg-gray-800 shadow-lg rounded-lg p-6 responsive-table-container">
+
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 pb-4 border-b border-gray-700">
+        <div>
+            <h2 class="text-2xl font-bold text-white">Log de Demandas de Veículos</h2>
+            <p class="text-gray-400 mt-1">Buscas individuais que não encontraram resultados.</p>
+        </div>
+        <div class="mt-4 sm:mt-0">
+            <a href="{{ url_for('main.home') }}" class="bg-gray-600 hover:bg-gray-500 text-white font-semibold py-2 px-4 rounded-lg flex items-center transition-colors w-full sm:w-auto justify-center">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                Voltar ao Início
+            </a>
+        </div>
+    </div>
+
+    <input type="hidden" id="csrf_token" value="{{ csrf_token() }}">
+
+    <div class="overflow-x-auto">
+        <table class="w-full text-left text-gray-300 responsive-table">
+            <thead class="bg-gray-700/50 text-sm text-gray-400 uppercase">
+                <tr>
+                    <th scope="col" class="px-6 py-3">Usuário</th>
+                    <th scope="col" class="px-6 py-3">Modelo Pesquisado</th>
+                    <th scope="col" class="px-6 py-3">Data da Busca</th>
+                    <th scope="col" class="px-6 py-3 text-center">Ações</th>
+                </tr>
+            </thead>
+            <tbody id="tabela-demandas">
+                </tbody>
+        </table>
+    </div>
+</div>
+
+<div id="confirmacaoModal" class="hidden fixed inset-0 bg-black bg-opacity-60 items-center justify-center z-50 p-4">
+    <div class="bg-gray-800 rounded-lg p-8 w-full max-w-md shadow-lg border border-gray-700 text-center">
+        <h2 class="text-2xl font-bold text-yellow-400 mb-4">⚠️ Confirmar Ação</h2>
+        <p class="text-lg text-gray-300 mb-8">
+            Você tem certeza que quer marcar TODAS as demandas por <br>
+            <strong id="termo-confirmacao" class="text-white font-mono"></strong><br>
+            como concluídas?
+        </p>
+        <div class="flex justify-center gap-4">
+            <button type="button" onclick="fecharModalConfirmacao()" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-6 rounded">Cancelar</button>
+            <button type="button" id="botao-confirmar-acao" onclick="confirmarAcao()" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded">Sim, Marcar</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // --- URLs dinâmicas geradas pelo Flask para o Blueprint admin ---
+    const API_DEMANDAS_URL = "{{ url_for('admin.api_demandas') }}";
+    const MARCAR_CONCLUIDO_URL = "{{ url_for('admin.marcar_demanda_concluida') }}";
+
+    // --- Funções do Modal ---
+    const confirmacaoModal = document.getElementById('confirmacaoModal');
+    const termoConfirmacaoSpan = document.getElementById('termo-confirmacao');
+    const botaoConfirmarAcao = document.getElementById('botao-confirmar-acao');
+
+    function abrirModalConfirmacao(termo) {
+        if (confirmacaoModal && termoConfirmacaoSpan && botaoConfirmarAcao) {
+            termoConfirmacaoSpan.textContent = `"${termo}"`;
+            botaoConfirmarAcao.dataset.termo = termo;
+            confirmacaoModal.classList.remove('hidden');
+            confirmacaoModal.classList.add('flex');
+        }
+    }
+
+    function fecharModalConfirmacao() {
+        if (confirmacaoModal) {
+            confirmacaoModal.classList.add('hidden');
+            confirmacaoModal.classList.remove('flex');
+        }
+    }
+
+    function confirmarAcao() {
+        const termo = botaoConfirmarAcao.dataset.termo;
+        if (termo) {
+            marcarConcluido(termo);
+        }
+        fecharModalConfirmacao();
+    }
+    
+    // --- LÓGICA PRINCIPAL ---
+    function marcarConcluido(termo) {
+        const csrfToken = document.getElementById('csrf_token').value;
+
+        // USA A VARIÁVEL QUE CRIAMOS LÁ EM CIMA COM O URL CORRETO
+        fetch(MARCAR_CONCLUIDO_URL, {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({ termo: termo })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.sucesso) {
+                carregarDemandas();
+                mostrarToast(`Demandas por "${termo}" arquivadas!`, 'success');
+            } else {
+                mostrarToast(data.erro || 'Erro ao arquivar demanda.', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Erro na requisição:', error);
+            mostrarToast('Erro de comunicação com o servidor.', 'error');
+        });
+    }
+
+    function carregarDemandas() {
+        const tabelaBody = document.getElementById('tabela-demandas');
+        tabelaBody.innerHTML = '<tr><td colspan="4" class="text-center p-8"><span class="text-gray-400">Carregando...</span></td></tr>';
+
+        // USA A VARIÁVEL QUE CRIAMOS LÁ EM CIMA COM O URL CORRETO
+        fetch(API_DEMANDAS_URL)
+            .then(response => response.json())
+            .then(data => {
+                tabelaBody.innerHTML = '';
+
+                if (data.length === 0) {
+                    tabelaBody.innerHTML = '<tr><td colspan="4" class="text-center p-8 text-gray-400">Nenhuma demanda pendente.</td></tr>';
+                    return;
+                }
+
+                data.forEach(item => {
+                    const termoEscapado = item.termo.replace(/'/g, "\\'");
+                    const row = `
+                        <tr class="bg-gray-800 border-b border-gray-700 hover:bg-gray-700/50">
+                            <td data-label="Usuário" class="px-6 py-4 font-semibold text-white">${item.usuario}</td>
+                            <td data-label="Modelo Pesquisado" class="px-6 py-4 text-gray-300">${item.termo}</td>
+                            <td data-label="Data da Busca" class="px-6 py-4 text-gray-400">${item.data_hora}</td>
+                            <td data-label="Ações" class="px-6 py-4 text-center">
+                                <button onclick="abrirModalConfirmacao('${termoEscapado}')" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-1 px-3 rounded-lg flex items-center text-sm transition-colors w-full justify-center">
+                                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                                    Concluir Demanda
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                    tabelaBody.innerHTML += row;
+                });
+            })
+            .catch(error => {
+                console.error('Erro ao buscar dados da API:', error);
+                tabelaBody.innerHTML = '<tr><td colspan="4" class="text-center p-8 text-red-400">Erro ao carregar os dados.</td></tr>';
+            });
+    }
+
+    document.addEventListener('DOMContentLoaded', carregarDemandas);
+</script>
+{% endblock %}

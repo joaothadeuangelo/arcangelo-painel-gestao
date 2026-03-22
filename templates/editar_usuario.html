@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+
+{% block title %}Editar Usuário{% endblock %}
+
+{# --- DESLIGA O MENU E O WHATSAPP NESSA TELA --- #}
+{% block sidebar %}{% endblock %}
+{% block whatsapp_button %}{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-center min-h-[70vh]">
+    <div class="bg-gray-800 p-8 rounded-lg shadow-lg border border-gray-700 w-full max-w-lg">
+        <h1 class="text-2xl font-bold text-left mb-6 flex items-center gap-3">
+            ✏️ Editar Usuário
+        </h1>
+
+        <form method="POST" class="space-y-5">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <div>
+                <label for="nome" class="block mb-1 font-medium">Nome:</label>
+                <input type="text" name="nome" value="{{ usuario.nome }}" required class="w-full p-3 bg-gray-700 rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+
+            <div>
+                <label for="telefone" class="block mb-1 font-medium">WhatsApp:</label>
+                <input type="tel" id="telefone" name="telefone" value="{{ usuario.telefone or '' }}" placeholder="(XX) XXXXX-XXXX" maxlength="15" class="w-full p-3 bg-gray-700 rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+
+            <div>
+                <label for="email_prefixo" class="block mb-1 font-medium">Email:</label>
+                <div class="flex items-center">
+                    <input type="text" id="email_prefixo" name="email_prefixo" value="{{ usuario.email.split('@')[0] }}" required class="w-full p-3 bg-gray-700 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500 z-10">
+                    <span id="email_sufixo" class="bg-gray-600 p-3 rounded-r-md text-gray-400 select-none">
+                        {% if usuario.admin %}@admin{% else %}@painel{% endif %}
+                    </span>
+                </div>
+            </div>
+            
+            <div>
+                <label for="senha" class="block mb-1 font-medium">Nova Senha:</label>
+                <input type="password" name="senha" placeholder="Deixe em branco para não alterar" class="w-full p-3 rounded bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+
+            <div>
+                <label class="block mb-2 font-medium">Validade do Acesso:</label>
+                <p class="text-sm text-gray-400 mb-2">Validade Atual: 
+                    <strong class="text-gray-200">
+                        {% if usuario.status == 'banido' %}<span class="text-red-500">Banido</span>
+                        {% elif usuario.validade %}{{ usuario.validade.strftime('%d/%m/%Y %H:%M') }}
+                        {% else %}Ilimitado{% endif %}
+                    </strong>
+                </p>
+                <div id="tempo-acesso-container" class="flex gap-2">
+                    <input type="number" id="tempo_val" name="tempo_val" placeholder="Adicionar valor" min="1" class="w-1/2 p-3 rounded bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <select id="tempo_tipo" name="tempo_tipo" class="w-1/2 p-3 rounded bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none">
+                        <option value="dias">Adicionar Dias</option>
+                        <option value="horas">Adicionar Horas</option>
+                        <option value="meses">Adicionar Meses</option>
+                    </select>
+                </div>
+            </div>
+            
+            <fieldset class="border border-gray-700 p-4 rounded-md">
+                <legend class="px-2 font-medium">Permissões do Usuário</legend>
+                <div class="space-y-3 mt-2">
+                    <div id="permissoes-normais" class="space-y-3 text-gray-300">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" name="pode_cadastrar" {% if usuario.pode_cadastrar %}checked{% endif %} class="h-5 w-5 rounded bg-gray-600 border-gray-500 text-blue-500 focus:ring-blue-600">
+                            Pode Cadastrar Veículos
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" name="pode_editar" {% if usuario.pode_editar %}checked{% endif %} class="h-5 w-5 rounded bg-gray-600 border-gray-500 text-blue-500 focus:ring-blue-600">
+                            Pode Editar Veículos
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" name="pode_excluir" {% if usuario.pode_excluir %}checked{% endif %} class="h-5 w-5 rounded bg-gray-600 border-gray-500 text-blue-500 focus:ring-blue-600">
+                            Pode Excluir Veículos
+                        </label>
+                    </div>
+                </div>
+            </fieldset>
+
+            <div class="flex flex-col sm:flex-row gap-4 pt-4">
+                <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded text-center transition-transform hover:-translate-y-0.5">
+                    💾 Salvar Alterações
+                </button>
+                <a href="{{ url_for('admin.listar_usuarios') }}" class="w-full bg-gray-600 hover:bg-gray-500 text-white font-semibold py-3 px-4 rounded text-center transition-transform hover:-translate-y-0.5">
+                    🔙 Cancelar
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Máscara para o campo de telefone
+    const telefoneInput = document.getElementById('telefone');
+    if (telefoneInput) {
+        telefoneInput.addEventListener('input', function (e) {
+            let value = e.target.value.replace(/\D/g, '');
+            value = value.replace(/^(\d{2})(\d)/g, '($1) $2');
+            value = value.replace(/(\d)(\d{4})$/, '$1-$2');
+            e.target.value = value;
+        });
+    }
+});
+</script>
+{% endblock %}

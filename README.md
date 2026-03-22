@@ -85,9 +85,9 @@ O acesso ao painel é restrito e pode ser limitado por tempo.
 
 
 👤 Autor
-Desenvolvido por Thadeu Angelo
-📫 github.com/ThadeuAngelo
-📧 [SEU_EMAIL_AQUI]
+Desenvolvido por João Thadeu Angelo
+📫 github.com/joaothadeuangelo
+📧 [joaothadeuangelo@gmail.com]
 
 
 📄 Licença
